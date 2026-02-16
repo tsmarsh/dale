@@ -91,6 +91,8 @@ jobs:
           VITE_USER_POOL_ID: ${{ steps.outputs.outputs.user_pool_id }}
           VITE_USER_POOL_CLIENT_ID: ${{ steps.outputs.outputs.user_pool_client_id }}
           VITE_COGNITO_DOMAIN: ${{ steps.outputs.outputs.cognito_domain }}
+          VITE_REDIRECT_SIGN_IN: ${{ steps.outputs.outputs.web_distribution_url }}/callback
+          VITE_REDIRECT_SIGN_OUT: ${{ steps.outputs.outputs.web_distribution_url }}/
 
       - name: Deploy web to S3
         run: aws s3 sync web/dist s3://${{ steps.outputs.outputs.web_bucket_name }} --delete
