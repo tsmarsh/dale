@@ -10,7 +10,7 @@ permissions:
 jobs:
   screenshots:
     runs-on: ubuntu-latest
-    environment: staging
+    environment: dev
     steps:
       - uses: actions/checkout@v4
 
@@ -30,17 +30,32 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
 
+      - name: Get stack outputs
+        id: stack
+        run: |
+          get_output() {
+            aws cloudformation describe-stacks --stack-name Dale-Dev \
+              --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text
+          }
+          echo "api_url=$(get_output AdminApiUrl)" >> "$GITHUB_OUTPUT"
+          echo "telegram_webhook_url=$(get_output TelegramWebhookUrl)" >> "$GITHUB_OUTPUT"
+          echo "stripe_webhook_url=$(get_output StripeWebhookUrl)" >> "$GITHUB_OUTPUT"
+          echo "user_pool_id=$(get_output UserPoolId)" >> "$GITHUB_OUTPUT"
+          echo "user_pool_client_id=$(get_output UserPoolClientId)" >> "$GITHUB_OUTPUT"
+          echo "web_distribution_url=$(get_output WebDistributionUrl)" >> "$GITHUB_OUTPUT"
+          echo "table_name=$(get_output TableName)" >> "$GITHUB_OUTPUT"
+
       - name: Run tutorial scenarios
         run: npx cucumber-js --tags @tutorial
         working-directory: e2e
         env:
-          E2E_ADMIN_API_URL: ${{ vars.E2E_ADMIN_API_URL }}
-          E2E_TELEGRAM_WEBHOOK_URL: ${{ vars.E2E_TELEGRAM_WEBHOOK_URL }}
-          E2E_STRIPE_WEBHOOK_URL: ${{ vars.E2E_STRIPE_WEBHOOK_URL }}
-          E2E_USER_POOL_ID: ${{ vars.E2E_USER_POOL_ID }}
-          E2E_USER_POOL_CLIENT_ID: ${{ vars.E2E_USER_POOL_CLIENT_ID }}
-          E2E_WEB_DISTRIBUTION_URL: ${{ vars.E2E_WEB_DISTRIBUTION_URL }}
-          E2E_TABLE_NAME: ${{ vars.E2E_TABLE_NAME }}
+          E2E_ADMIN_API_URL: ${{ steps.stack.outputs.api_url }}
+          E2E_TELEGRAM_WEBHOOK_URL: ${{ steps.stack.outputs.telegram_webhook_url }}
+          E2E_STRIPE_WEBHOOK_URL: ${{ steps.stack.outputs.stripe_webhook_url }}
+          E2E_USER_POOL_ID: ${{ steps.stack.outputs.user_pool_id }}
+          E2E_USER_POOL_CLIENT_ID: ${{ steps.stack.outputs.user_pool_client_id }}
+          E2E_WEB_DISTRIBUTION_URL: ${{ steps.stack.outputs.web_distribution_url }}
+          E2E_TABLE_NAME: ${{ steps.stack.outputs.table_name }}
 
       - name: Commit and push screenshots
         run: |
