@@ -19,6 +19,9 @@ Given<DaleWorld>('I am authenticated in the browser', { timeout: 30000 }, async 
       refreshToken: this.refreshToken,
     },
   );
+
+  // Debug: capture what the page looks like after auth injection
+  await takeScreenshot(this.page, '_debug-after-auth');
 });
 
 When<DaleWorld>('I navigate to the onboarding page', { timeout: 15000 }, async function () {

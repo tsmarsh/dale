@@ -57,6 +57,13 @@ jobs:
           E2E_WEB_DISTRIBUTION_URL: ${{ steps.stack.outputs.web_distribution_url }}
           E2E_TABLE_NAME: ${{ steps.stack.outputs.table_name }}
 
+      - name: Upload debug screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: site/screenshots/
+
       - name: Commit and push screenshots
         run: |
           git config user.name "github-actions[bot]"

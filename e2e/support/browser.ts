@@ -27,30 +27,35 @@ export async function injectCognitoAuth(
   username: string,
   tokens: CognitoTokens,
 ): Promise<void> {
-  // Decode the idToken to get the Cognito sub (UUID) — Amplify v6 uses
-  // the sub as the last-auth-user key, not the email.
-  const payload = decodeJwtPayload(tokens.idToken);
-  const sub = payload.sub as string;
-  const lastAuthUser = sub || username;
+  // Decode tokens to discover the actual Cognito username.
+  // AdminCreateUser may assign a UUID as the internal username even when
+  // the email is passed as the Username parameter.
+  const accessPayload = decodeJwtPayload(tokens.accessToken);
+  const cognitoUsername = (accessPayload.username as string) || username;
+  const sub = accessPayload.sub as string;
+
+  console.log(`[browser] Injecting auth — cognito username: ${cognitoUsername}, sub: ${sub}, email: ${username}`);
 
   // Navigate to the app origin so localStorage writes go to the right domain
   await page.goto(baseUrl, { waitUntil: 'commit' });
 
-  // Inject Cognito tokens into localStorage in the format Amplify v6 expects
+  // Inject Cognito tokens into localStorage in the format Amplify v6 expects.
+  // Amplify reads LastAuthUser first, then uses that value to key into tokens.
   await page.evaluate(
-    ({ clientId, lastAuthUser, username, tokens }) => {
+    ({ clientId, cognitoUsername, sub, email, tokens }) => {
       const prefix = `CognitoIdentityServiceProvider.${clientId}`;
-      localStorage.setItem(`${prefix}.LastAuthUser`, lastAuthUser);
+      localStorage.setItem(`${prefix}.LastAuthUser`, cognitoUsername);
 
-      // Set tokens keyed by both sub and username for compatibility
-      for (const key of [lastAuthUser, username]) {
+      // Set tokens for every possible username variant so Amplify finds them
+      const userKeys = new Set([cognitoUsername, sub, email].filter(Boolean));
+      for (const key of userKeys) {
         localStorage.setItem(`${prefix}.${key}.idToken`, tokens.idToken);
         localStorage.setItem(`${prefix}.${key}.accessToken`, tokens.accessToken);
         localStorage.setItem(`${prefix}.${key}.refreshToken`, tokens.refreshToken);
         localStorage.setItem(`${prefix}.${key}.clockDrift`, '0');
       }
     },
-    { clientId, lastAuthUser, username, tokens },
+    { clientId, cognitoUsername, sub, email: username, tokens },
   );
 
   // Reload so Amplify picks up the injected tokens
