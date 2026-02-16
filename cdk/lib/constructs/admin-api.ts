@@ -153,7 +153,12 @@ export class AdminApi extends Construct {
 
     this.api.addRoutes({
       path: '/{proxy+}',
-      methods: [apigwv2.HttpMethod.ANY],
+      methods: [
+        apigwv2.HttpMethod.GET,
+        apigwv2.HttpMethod.POST,
+        apigwv2.HttpMethod.PUT,
+        apigwv2.HttpMethod.DELETE,
+      ],
       integration,
       authorizer,
     });
