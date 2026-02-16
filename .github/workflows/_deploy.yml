@@ -6,6 +6,21 @@ on:
       environment:
         required: true
         type: string
+    outputs:
+      api_url:
+        value: ${{ jobs.deploy.outputs.api_url }}
+      telegram_webhook_url:
+        value: ${{ jobs.deploy.outputs.telegram_webhook_url }}
+      stripe_webhook_url:
+        value: ${{ jobs.deploy.outputs.stripe_webhook_url }}
+      user_pool_id:
+        value: ${{ jobs.deploy.outputs.user_pool_id }}
+      user_pool_client_id:
+        value: ${{ jobs.deploy.outputs.user_pool_client_id }}
+      web_distribution_url:
+        value: ${{ jobs.deploy.outputs.web_distribution_url }}
+      table_name:
+        value: ${{ jobs.deploy.outputs.table_name }}
 
 permissions:
   id-token: write
@@ -15,6 +30,14 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
+    outputs:
+      api_url: ${{ steps.outputs.outputs.api_url }}
+      telegram_webhook_url: ${{ steps.outputs.outputs.telegram_webhook_url }}
+      stripe_webhook_url: ${{ steps.outputs.outputs.stripe_webhook_url }}
+      user_pool_id: ${{ steps.outputs.outputs.user_pool_id }}
+      user_pool_client_id: ${{ steps.outputs.outputs.user_pool_client_id }}
+      web_distribution_url: ${{ steps.outputs.outputs.web_distribution_url }}
+      table_name: ${{ steps.outputs.outputs.table_name }}
     steps:
       - uses: actions/checkout@v4
 
@@ -50,12 +73,15 @@ jobs:
         run: |
           STACK_NAME="Dale-$(echo '${{ inputs.environment }}' | sed 's/./\U&/' )"
           echo "api_url=$(jq -r ".\"${STACK_NAME}\".AdminApiUrl" cdk-outputs.json)" >> "$GITHUB_OUTPUT"
+          echo "telegram_webhook_url=$(jq -r ".\"${STACK_NAME}\".TelegramWebhookUrl" cdk-outputs.json)" >> "$GITHUB_OUTPUT"
+          echo "stripe_webhook_url=$(jq -r ".\"${STACK_NAME}\".StripeWebhookUrl" cdk-outputs.json)" >> "$GITHUB_OUTPUT"
           echo "user_pool_id=$(jq -r ".\"${STACK_NAME}\".UserPoolId" cdk-outputs.json)" >> "$GITHUB_OUTPUT"
           echo "user_pool_client_id=$(jq -r ".\"${STACK_NAME}\".UserPoolClientId" cdk-outputs.json)" >> "$GITHUB_OUTPUT"
           echo "cognito_domain=$(jq -r ".\"${STACK_NAME}\".CognitoDomain" cdk-outputs.json)" >> "$GITHUB_OUTPUT"
           echo "web_distribution_url=$(jq -r ".\"${STACK_NAME}\".WebDistributionUrl" cdk-outputs.json)" >> "$GITHUB_OUTPUT"
           echo "web_bucket_name=$(jq -r ".\"${STACK_NAME}\".WebBucketName" cdk-outputs.json)" >> "$GITHUB_OUTPUT"
           echo "distribution_id=$(jq -r ".\"${STACK_NAME}\".DistributionId" cdk-outputs.json)" >> "$GITHUB_OUTPUT"
+          echo "table_name=$(jq -r ".\"${STACK_NAME}\".TableName" cdk-outputs.json)" >> "$GITHUB_OUTPUT"
 
       - name: Build web app
         run: npm run build
