@@ -5,16 +5,18 @@ vi.mock('../../shared/tenant-config.js', () => ({
   getTenantSecrets: vi.fn(),
 }));
 
-const mockConstructEvent = vi.fn();
+const { mockConstructEvent } = vi.hoisted(() => {
+  const mockConstructEvent = vi.fn();
+  return { mockConstructEvent };
+});
 
-vi.mock('stripe', () => {
-  return {
-    default: vi.fn().mockImplementation(() => ({
-      webhooks: {
-        constructEvent: mockConstructEvent,
-      },
-    })),
-  };
+vi.mock('stripe', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('stripe')>();
+  class MockStripe {
+    webhooks = { constructEvent: mockConstructEvent };
+    constructor(_key: string) {}
+  }
+  return { ...mod, default: MockStripe, Stripe: MockStripe };
 });
 
 vi.mock('../events.js', () => ({
