@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './styles/cyberpunk.css';
 import { Amplify } from '@aws-amplify/core';
 import { cognitoUserPoolsTokenProvider } from '@aws-amplify/auth/cognito';
 import { fetchAuthSession } from '@aws-amplify/auth';

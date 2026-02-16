@@ -24,43 +24,47 @@ export function RoomListPage() {
   }
 
   if (loading) return <p>Loading rooms...</p>;
-  if (error) return <p style={{ color: 'red' }}>{error}</p>;
+  if (error) return <p className="error-text">{error}</p>;
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="flex-between">
         <h1>Rooms</h1>
-        <button onClick={() => setShowForm(!showForm)}>
+        <button className="btn-secondary" onClick={() => setShowForm(!showForm)}>
           {showForm ? 'Cancel' : 'Create Room'}
         </button>
       </div>
 
       {showForm && (
-        <div style={{ border: '1px solid #ddd', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
-          <input
-            type="text"
-            placeholder="Room name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
-          />
-          <input
-            type="text"
-            placeholder="Stripe payment link URL"
-            value={paymentLink}
-            onChange={(e) => setPaymentLink(e.target.value)}
-            style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
-          />
-          <button onClick={handleCreate} disabled={!name || !paymentLink || creating}>
+        <div className="card" style={{ marginTop: '1rem' }}>
+          <div className="form-group">
+            <input
+              type="text"
+              placeholder="Room name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <input
+              type="text"
+              placeholder="Stripe payment link URL"
+              value={paymentLink}
+              onChange={(e) => setPaymentLink(e.target.value)}
+            />
+          </div>
+          <button className="btn-primary" onClick={handleCreate} disabled={!name || !paymentLink || creating}>
             {creating ? 'Creating...' : 'Create'}
           </button>
         </div>
       )}
 
       {rooms.length === 0 ? (
-        <p>No rooms yet. Create one to get started.</p>
+        <p style={{ marginTop: '1rem' }}>No rooms yet. Create one to get started.</p>
       ) : (
-        rooms.map((room) => <RoomCard key={room.roomId} room={room} />)
+        <div style={{ marginTop: '1rem' }}>
+          {rooms.map((room) => <RoomCard key={room.roomId} room={room} />)}
+        </div>
       )}
     </div>
   );

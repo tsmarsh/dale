@@ -44,20 +44,35 @@ export function RoomDetailPage() {
 
       {editing ? (
         <div style={{ marginBottom: '1rem' }}>
-          <label>Name: <input value={form.name ?? ''} onChange={(e) => setForm({ ...form, name: e.target.value })} style={{ padding: '0.25rem' }} /></label><br />
-          <label>Description: <input value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} style={{ padding: '0.25rem' }} /></label><br />
-          <label>Payment Link: <input value={form.paymentLink ?? ''} onChange={(e) => setForm({ ...form, paymentLink: e.target.value })} style={{ padding: '0.25rem' }} /></label><br />
-          <label>Active: <input type="checkbox" checked={form.isActive ?? false} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} /></label><br />
-          <button onClick={handleSave} style={{ marginTop: '0.5rem' }}>Save</button>
-          <button onClick={() => setEditing(false)} style={{ marginLeft: '0.5rem' }}>Cancel</button>
+          <div className="form-group">
+            <label>Name:</label>
+            <input type="text" value={form.name ?? ''} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Description:</label>
+            <input type="text" value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Payment Link:</label>
+            <input type="text" value={form.paymentLink ?? ''} onChange={(e) => setForm({ ...form, paymentLink: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>
+              <input type="checkbox" checked={form.isActive ?? false} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} /> Active
+            </label>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="btn-primary" onClick={handleSave}>Save</button>
+            <button className="btn-secondary" onClick={() => setEditing(false)}>Cancel</button>
+          </div>
         </div>
       ) : (
         <div style={{ marginBottom: '1rem' }}>
-          <p>Status: {room.isActive ? 'Active' : 'Inactive'}</p>
+          <p>Status: <span className={`badge ${room.isActive ? 'badge-active' : 'badge-inactive'}`}>{room.isActive ? 'Active' : 'Inactive'}</span></p>
           {room.description && <p>Description: {room.description}</p>}
           {room.telegramGroupId && <p>Telegram Group: {room.telegramGroupId}</p>}
           <p>Payment Link: <code>{room.paymentLink}</code></p>
-          <button onClick={() => setEditing(true)}>Edit</button>
+          <button className="btn-primary" onClick={() => setEditing(true)} style={{ marginTop: '0.5rem' }}>Edit</button>
         </div>
       )}
 

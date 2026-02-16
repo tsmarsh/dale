@@ -1,19 +1,19 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 
 export function ProtectedRoute() {
   const { isAuthenticated, isLoading, signIn } = useAuth();
 
   if (isLoading) {
-    return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>;
+    return <div className="loading-text">Loading...</div>;
   }
 
   if (!isAuthenticated) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1>Dale</h1>
+      <div className="hero">
+        <h1 className="glitch-auto neon-text">Dale</h1>
         <p>Creator dashboard for managing your Telegram subscriptions.</p>
-        <button onClick={signIn} style={{ padding: '0.5rem 1.5rem', fontSize: '1rem', cursor: 'pointer' }}>
+        <button className="btn-filled" onClick={signIn}>
           Sign in with Google
         </button>
       </div>

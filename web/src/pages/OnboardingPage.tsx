@@ -21,7 +21,7 @@ export function OnboardingPage() {
           Stripe webhook URL: <code>{result.stripeWebhookUrl}</code><br />
           <small>Add this URL in your Stripe dashboard under Webhooks.</small>
         </p>
-        <button onClick={() => navigate('/')} style={{ marginTop: '1rem' }}>
+        <button className="btn-primary" onClick={() => navigate('/')} style={{ marginTop: '1rem' }}>
           Go to Dashboard
         </button>
       </div>

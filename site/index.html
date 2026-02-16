@@ -5,99 +5,179 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dale - Monetize Telegram Communities with Stripe Subscriptions</title>
   <meta name="description" content="Multi-tenant serverless platform that lets creators monetize Telegram communities with Stripe subscriptions. Built with AWS Lambda, DynamoDB, and CDK.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <style>
+    /* ── Cyberpunk Design Tokens ── */
+    @property --border-angle {
+      syntax: '<angle>';
+      initial-value: 0deg;
+      inherits: false;
+    }
+
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --bg: #0f1117;
-      --surface: #1a1d27;
-      --border: #2a2d3a;
-      --text: #e4e4e7;
-      --text-muted: #9ca3af;
-      --accent: #6366f1;
-      --accent-hover: #818cf8;
-      --telegram: #29b6f6;
-      --stripe: #635bff;
-      --aws: #ff9900;
+      --bg-deep: #050508;
+      --bg: #0a0a0f;
+      --bg-surface: #111118;
+      --bg-inset: #0d0d14;
+      --border: #1e1e2e;
+      --border-bright: #2a2a3e;
+      --text: #e0dfe6;
+      --text-muted: #7a7a8e;
+      --text-dim: #4a4a5e;
+      --cyan: #00fff0;
+      --magenta: #ff00aa;
+      --purple: #b34dff;
+      --yellow: #ffe600;
+      --font-heading: 'Orbitron', sans-serif;
+      --font-body: 'Rajdhani', sans-serif;
+      --font-mono: 'Share Tech Mono', monospace;
+    }
+
+    ::selection {
+      background: rgba(0, 255, 240, 0.25);
+      color: var(--cyan);
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: var(--font-body);
+      font-weight: 500;
       background: var(--bg);
       color: var(--text);
       line-height: 1.6;
+      background-image:
+        linear-gradient(rgba(0, 255, 240, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 240, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
     }
 
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { color: var(--accent-hover); }
+    /* Scan lines */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.08) 2px, rgba(0, 0, 0, 0.08) 4px);
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* CRT vignette */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.4) 100%);
+      pointer-events: none;
+      z-index: 9998;
+    }
+
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-deep); }
+    ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: var(--font-heading);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    a { color: var(--cyan); text-decoration: none; transition: color 0.2s, text-shadow 0.2s; }
+    a:hover { color: #fff; text-shadow: 0 0 8px rgba(0, 255, 240, 0.6); }
 
     .container { max-width: 960px; margin: 0 auto; padding: 0 1.5rem; }
 
-    /* Hero */
+    /* ── Hero ── */
     .hero {
       text-align: center;
       padding: 6rem 1.5rem 4rem;
     }
     .hero h1 {
       font-size: clamp(2.5rem, 6vw, 4rem);
-      font-weight: 800;
-      letter-spacing: -0.02em;
+      font-weight: 900;
       margin-bottom: 1rem;
     }
-    .hero h1 span { color: var(--accent); }
     .hero p {
-      font-size: 1.25rem;
+      font-size: 1.15rem;
       color: var(--text-muted);
       max-width: 600px;
       margin: 0 auto 2rem;
     }
-    .btn {
-      display: inline-block;
-      background: var(--accent);
-      color: #fff;
-      padding: 0.75rem 2rem;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 600;
-      transition: background 0.2s;
-    }
-    .btn:hover { background: var(--accent-hover); color: #fff; }
 
-    /* Section */
+    /* Glitch effect */
+    @keyframes glitch-color {
+      0%, 100% { text-shadow: 2px 0 var(--cyan), -2px 0 var(--magenta); }
+      25% { text-shadow: -2px -1px var(--magenta), 2px 1px var(--cyan); }
+      50% { text-shadow: 1px 2px var(--cyan), -1px -2px var(--magenta); }
+      75% { text-shadow: -1px 1px var(--magenta), 1px -1px var(--cyan); }
+    }
+    .glitch-auto {
+      animation: glitch-color 8s infinite;
+    }
+    .neon-text {
+      color: var(--cyan);
+      text-shadow: 0 0 7px rgba(0, 255, 240, 0.6), 0 0 20px rgba(0, 255, 240, 0.3);
+    }
+
+    /* ── Button ── */
+    .btn-filled {
+      display: inline-block;
+      background: var(--cyan);
+      color: var(--bg-deep);
+      font-family: var(--font-heading);
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.75rem 2rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-filled:hover {
+      background: #fff;
+      color: var(--bg-deep);
+      box-shadow: 0 0 20px rgba(0, 255, 240, 0.5);
+      text-shadow: none;
+    }
+
+    /* ── Sections ── */
     section { padding: 4rem 0; }
     section h2 {
-      font-size: 2rem;
+      font-size: 1.75rem;
       font-weight: 700;
       text-align: center;
       margin-bottom: 2.5rem;
     }
 
-    /* Features */
+    /* ── Features ── */
     .features-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 1.5rem;
     }
     .feature-card {
-      background: var(--surface);
+      background: var(--bg-surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 8px;
       padding: 1.5rem;
+      transition: border-color 0.3s, box-shadow 0.3s;
     }
-    .feature-card .icon {
-      font-size: 2rem;
-      margin-bottom: 0.75rem;
+    .feature-card:hover {
+      border-color: var(--cyan);
+      box-shadow: 0 0 20px rgba(0, 255, 240, 0.1);
     }
-    .feature-card h3 {
-      font-size: 1.1rem;
-      margin-bottom: 0.5rem;
-    }
-    .feature-card p {
-      color: var(--text-muted);
-      font-size: 0.95rem;
-    }
+    .feature-card .icon { font-size: 2rem; margin-bottom: 0.75rem; }
+    .feature-card h3 { font-size: 1rem; margin-bottom: 0.5rem; color: var(--cyan); }
+    .feature-card p { color: var(--text-muted); font-size: 0.9rem; }
 
-    /* How it Works */
+    /* ── Steps ── */
     .steps {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -105,49 +185,53 @@
       text-align: center;
     }
     .step {
-      background: var(--surface);
+      background: var(--bg-surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 8px;
       padding: 2rem 1.5rem;
+      transition: border-color 0.3s;
     }
+    .step:hover { border-color: var(--border-bright); }
     .step-number {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       width: 2.5rem;
       height: 2.5rem;
-      background: var(--accent);
-      color: #fff;
+      background: transparent;
+      border: 2px solid var(--cyan);
+      color: var(--cyan);
       border-radius: 50%;
+      font-family: var(--font-heading);
       font-weight: 700;
-      font-size: 1.1rem;
+      font-size: 1rem;
       margin-bottom: 1rem;
     }
     .step h3 { margin-bottom: 0.5rem; }
-    .step p { color: var(--text-muted); font-size: 0.95rem; }
+    .step p { color: var(--text-muted); font-size: 0.9rem; }
 
-    /* Architecture */
+    /* ── Architecture ── */
     .arch-diagram {
-      background: var(--surface);
+      background: var(--bg-surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 8px;
       padding: 2rem;
       overflow-x: auto;
     }
     .arch-diagram pre {
-      font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+      font-family: var(--font-mono);
       font-size: 0.85rem;
       line-height: 1.8;
       color: var(--text);
       text-align: center;
       white-space: pre;
     }
-    .arch-diagram .label-telegram { color: var(--telegram); }
-    .arch-diagram .label-stripe { color: var(--stripe); }
-    .arch-diagram .label-aws { color: var(--aws); }
-    .arch-diagram .label-muted { color: var(--text-muted); }
+    .arch-diagram .label-telegram { color: #29b6f6; }
+    .arch-diagram .label-stripe { color: #635bff; }
+    .arch-diagram .label-aws { color: var(--yellow); }
+    .arch-diagram .label-muted { color: var(--text-dim); }
 
-    /* Tech Stack */
+    /* ── Tech Stack ── */
     .tech-grid {
       display: flex;
       flex-wrap: wrap;
@@ -155,21 +239,43 @@
       gap: 1rem;
     }
     .tech-badge {
-      background: var(--surface);
+      background: var(--bg-surface);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.6rem 1.25rem;
-      font-size: 0.95rem;
-      font-weight: 500;
+      border-radius: 4px;
+      padding: 0.5rem 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .tech-badge:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
     }
 
-    /* Footer */
+    /* ── Footer ── */
     footer {
       text-align: center;
       padding: 3rem 1.5rem;
       border-top: 1px solid var(--border);
       color: var(--text-muted);
+      font-family: var(--font-body);
       font-size: 0.9rem;
+    }
+
+    @media (max-width: 640px) {
+      .container { padding: 0 1rem; }
+      .hero { padding: 3rem 1rem 2rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      body::after { display: none; }
+      body::before { display: none; }
     }
   </style>
 </head>
@@ -178,9 +284,9 @@
   <!-- Hero -->
   <header class="hero">
     <div class="container">
-      <h1><span>Dale</span></h1>
+      <h1 class="glitch-auto neon-text">Dale</h1>
       <p>Monetize Telegram communities with Stripe subscriptions. Multi-tenant, serverless, deploy-and-go.</p>
-      <a href="https://github.com/tsmarsh/dale" class="btn">View on GitHub</a>
+      <a href="https://github.com/tsmarsh/dale" class="btn-filled">View on GitHub</a>
     </div>
   </header>
 

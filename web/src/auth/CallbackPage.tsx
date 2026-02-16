@@ -11,5 +11,5 @@ export function CallbackPage() {
     return () => clearTimeout(timer);
   }, [navigate]);
 
-  return <div style={{ padding: '2rem', textAlign: 'center' }}>Signing in...</div>;
+  return <div className="loading-text">Signing in...</div>;
 }

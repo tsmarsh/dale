@@ -7,17 +7,17 @@ interface RoomCardProps {
 
 export function RoomCard({ room }: RoomCardProps) {
   return (
-    <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '1rem', marginBottom: '0.5rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link to={`/rooms/${room.roomId}`} style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
+    <div className="card">
+      <div className="card-header">
+        <Link to={`/rooms/${room.roomId}`} className="card-title">
           {room.name}
         </Link>
-        <span style={{ color: room.isActive ? 'green' : 'gray' }}>
+        <span className={`badge ${room.isActive ? 'badge-active' : 'badge-inactive'}`}>
           {room.isActive ? 'Active' : 'Inactive'}
         </span>
       </div>
-      {room.description && <p style={{ color: '#666', margin: '0.25rem 0' }}>{room.description}</p>}
-      {room.telegramGroupId && <p style={{ fontSize: '0.8rem', color: '#999' }}>Telegram Group: {room.telegramGroupId}</p>}
+      {room.description && <p className="card-description">{room.description}</p>}
+      {room.telegramGroupId && <p className="card-meta">Telegram Group: {room.telegramGroupId}</p>}
     </div>
   );
 }

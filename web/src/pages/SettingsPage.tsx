@@ -41,15 +41,15 @@ export function SettingsPage() {
       <section style={{ marginBottom: '2rem' }}>
         <h2>Profile</h2>
         <p>Tenant ID: <code>{tenant.tenantId}</code></p>
-        <label>
-          Display Name:
+        <div className="form-group">
+          <label>Display Name:</label>
           <input
+            type="text"
             value={displayName || tenant.displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            style={{ marginLeft: '0.5rem', padding: '0.25rem' }}
           />
-        </label>
-        <button onClick={handleSave} disabled={saving} style={{ marginLeft: '0.5rem' }}>
+        </div>
+        <button className="btn-primary" onClick={handleSave} disabled={saving}>
           {saving ? 'Saving...' : 'Save'}
         </button>
       </section>
@@ -57,10 +57,10 @@ export function SettingsPage() {
       <section>
         <h2>Telegram Webhook</h2>
         <p>Re-register your bot's webhook with the platform.</p>
-        <button onClick={handleRegisterWebhook} disabled={registering}>
+        <button className="btn-primary" onClick={handleRegisterWebhook} disabled={registering}>
           {registering ? 'Registering...' : 'Register Webhook'}
         </button>
-        {webhookStatus && <p>{webhookStatus}</p>}
+        {webhookStatus && <p style={{ marginTop: '0.5rem' }}>{webhookStatus}</p>}
       </section>
     </div>
   );
