@@ -60,26 +60,6 @@ export async function injectCognitoAuth(
   // Navigate to the app — addInitScript runs before page JS, so Amplify
   // will see our tokens when it initializes.
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
-
-  // Verify init script ran and check what bundle is served
-  const debug = await page.evaluate(() => {
-    const lsCount = localStorage.length;
-    const cognitoKeys: string[] = [];
-    for (let i = 0; i < lsCount; i++) {
-      const key = localStorage.key(i)!;
-      if (key.includes('Cognito')) cognitoKeys.push(key);
-    }
-    const scripts = Array.from(document.querySelectorAll('script[src]')).map(
-      (s) => (s as HTMLScriptElement).src,
-    );
-    return { lsCount, cognitoKeys, scripts, url: window.location.href };
-  });
-  console.log(`[browser] URL: ${debug.url}`);
-  console.log(`[browser] Scripts: ${debug.scripts.join(', ')}`);
-  console.log(`[browser] localStorage: ${debug.lsCount} keys, Cognito keys: ${debug.cognitoKeys.length}`);
-  if (debug.cognitoKeys.length === 0) {
-    console.log('[browser] WARNING: No Cognito keys in localStorage! addInitScript may not have run.');
-  }
 }
 
 export async function takeScreenshot(page: Page, name: string): Promise<void> {

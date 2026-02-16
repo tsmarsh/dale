@@ -2,6 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Amplify } from '@aws-amplify/core';
 import { cognitoUserPoolsTokenProvider } from '@aws-amplify/auth/cognito';
+import { fetchAuthSession } from '@aws-amplify/auth';
+import { setTokenProvider } from './api/client';
 import App from './App';
 
 const authConfig = {
@@ -26,6 +28,16 @@ Amplify.configure(
   { Auth: authConfig },
   { Auth: { tokenProvider: cognitoUserPoolsTokenProvider } },
 );
+
+// Set token provider before React renders so API calls have auth immediately
+setTokenProvider(async () => {
+  try {
+    const session = await fetchAuthSession();
+    return session.tokens?.idToken?.toString() ?? null;
+  } catch {
+    return null;
+  }
+});
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
