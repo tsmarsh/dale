@@ -27,24 +27,21 @@ export async function injectCognitoAuth(
   username: string,
   tokens: CognitoTokens,
 ): Promise<void> {
-  // Decode tokens to discover the actual Cognito username.
-  // AdminCreateUser may assign a UUID as the internal username even when
-  // the email is passed as the Username parameter.
   const accessPayload = decodeJwtPayload(tokens.accessToken);
   const cognitoUsername = (accessPayload.username as string) || username;
   const sub = accessPayload.sub as string;
+  const exp = accessPayload.exp as number;
 
   console.log(`[browser] Injecting auth — cognito username: ${cognitoUsername}, sub: ${sub}, email: ${username}`);
+  console.log(`[browser] Token exp: ${exp}, now: ${Math.floor(Date.now() / 1000)}, remaining: ${exp - Math.floor(Date.now() / 1000)}s`);
 
   // Use addInitScript to inject tokens BEFORE any page JavaScript runs.
-  // This guarantees tokens are in localStorage before Amplify.configure() and
-  // getCurrentUser() execute, avoiding any race conditions.
   await page.addInitScript(
     ({ clientId, cognitoUsername, sub, email, tokens }) => {
       const prefix = `CognitoIdentityServiceProvider.${clientId}`;
-      localStorage.setItem(`${prefix}.LastAuthUser`, cognitoUsername);
 
-      // Set tokens for every possible username variant so Amplify finds them
+      // Set tokens
+      localStorage.setItem(`${prefix}.LastAuthUser`, cognitoUsername);
       const userKeys = new Set([cognitoUsername, sub, email].filter(Boolean));
       for (const key of userKeys) {
         localStorage.setItem(`${prefix}.${key}.idToken`, tokens.idToken);
@@ -53,69 +50,80 @@ export async function injectCognitoAuth(
         localStorage.setItem(`${prefix}.${key}.clockDrift`, '0');
       }
 
-      // Ensure no stale OAuth inflight flag blocks token loading
+      // Clear stale OAuth flags
       localStorage.removeItem(`${prefix}.inflightOAuth`);
 
-      // Capture errors for debugging
-      (window as any).__amplifyErrors = [];
-      const origError = console.error;
-      console.error = (...args: any[]) => {
-        (window as any).__amplifyErrors.push(args.map(String).join(' '));
-        origError.apply(console, args);
+      // Intercept localStorage.getItem to trace what Amplify reads
+      const origGetItem = localStorage.getItem.bind(localStorage);
+      const origRemoveItem = localStorage.removeItem.bind(localStorage);
+      (window as any).__lsTrace = [] as string[];
+
+      localStorage.getItem = function (key: string) {
+        const val = origGetItem(key);
+        if (key.includes('Cognito') || key.includes('amplify')) {
+          const trace = `getItem(${key}) => ${val === null ? 'null' : val.substring(0, 40) + (val.length > 40 ? '...' : '')}`;
+          (window as any).__lsTrace.push(trace);
+        }
+        return val;
       };
+
+      localStorage.removeItem = function (key: string) {
+        if (key.includes('Cognito') || key.includes('amplify')) {
+          (window as any).__lsTrace.push(`removeItem(${key})`);
+        }
+        return origRemoveItem(key);
+      };
+
+      // Intercept fetch to see if Amplify makes network calls (e.g., token refresh)
+      const origFetch = window.fetch.bind(window);
+      (window as any).__fetchTrace = [] as string[];
+      window.fetch = async function (...args: any[]) {
+        const url = typeof args[0] === 'string' ? args[0] : args[0]?.url ?? 'unknown';
+        (window as any).__fetchTrace.push(`fetch: ${url}`);
+        try {
+          const resp = await origFetch(...args);
+          (window as any).__fetchTrace.push(`  => ${resp.status} ${resp.statusText}`);
+          return resp;
+        } catch (err: any) {
+          (window as any).__fetchTrace.push(`  => ERROR: ${err.message}`);
+          throw err;
+        }
+      } as typeof window.fetch;
     },
     { clientId, cognitoUsername, sub, email: username, tokens },
   );
 
-  // Also capture browser console logs server-side for debugging
+  // Capture ALL browser console messages for debugging
   page.on('console', (msg) => {
-    if (msg.type() === 'error' || msg.text().includes('Auth') || msg.text().includes('Cognito')) {
-      console.log(`[browser console ${msg.type()}] ${msg.text()}`);
-    }
+    console.log(`[page ${msg.type()}] ${msg.text()}`);
   });
 
-  // Navigate to the app — addInitScript runs before page JS, so Amplify
-  // will see our tokens when it initializes.
+  // Capture uncaught page errors
+  page.on('pageerror', (err) => {
+    console.log(`[page error] ${err.message}`);
+  });
+
+  // Navigate to the app
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
 
-  // Verify the deployed app's client ID matches what we injected.
-  // Amplify bakes VITE_USER_POOL_CLIENT_ID into the bundle at build time.
-  const appClientId = await page.evaluate(() => {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)!;
-      if (key.includes('CognitoIdentityServiceProvider') && key.includes('LastAuthUser')) {
-        // Extract clientId from: CognitoIdentityServiceProvider.{clientId}.LastAuthUser
-        const parts = key.split('.');
-        return parts[1];
-      }
-    }
-    return null;
-  });
-  console.log(`[browser] Injected clientId: ${clientId}, app clientId from localStorage: ${appClientId}`);
-
-  // Check what the page shows after auth injection
-  const bodyText = await page.evaluate(() => document.body.innerText.substring(0, 300));
-  console.log('[browser] Page text after navigation:', bodyText);
-
-  // If we still see the sign-in page, dump localStorage for debugging
-  if (bodyText.includes('Sign in')) {
-    const lsKeys = await page.evaluate(() => {
-      const result: Record<string, string> = {};
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i)!;
-        if (key.includes('Cognito')) {
-          const val = localStorage.getItem(key) ?? '';
-          result[key] = val.length > 50 ? val.substring(0, 50) + '...' : val;
-        }
-      }
-      return result;
-    });
-    console.log('[browser] WARNING: Still on sign-in page. localStorage keys:', JSON.stringify(lsKeys, null, 2));
-
-    // Check for any console errors from the page
-    const consoleErrors = await page.evaluate(() => (window as any).__amplifyErrors ?? []);
-    console.log('[browser] Console errors:', JSON.stringify(consoleErrors));
+  // Dump all traces
+  const lsTrace = await page.evaluate(() => (window as any).__lsTrace ?? []);
+  console.log(`[browser] localStorage trace (${lsTrace.length} calls):`);
+  for (const entry of lsTrace) {
+    console.log(`  ${entry}`);
   }
+
+  const fetchTrace = await page.evaluate(() => (window as any).__fetchTrace ?? []);
+  if (fetchTrace.length > 0) {
+    console.log(`[browser] fetch trace:`);
+    for (const entry of fetchTrace) {
+      console.log(`  ${entry}`);
+    }
+  }
+
+  // Check page content
+  const bodyText = await page.evaluate(() => document.body.innerText.substring(0, 300));
+  console.log('[browser] Page text:', bodyText);
 }
 
 export async function takeScreenshot(page: Page, name: string): Promise<void> {
