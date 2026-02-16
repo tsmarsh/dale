@@ -22,6 +22,22 @@ Before<DaleWorld>({ tags: '@tutorial' }, async function () {
     deviceScaleFactor: 2,
   });
   this.page = await this.context.newPage();
+
+  // Network diagnostics for debugging API failures
+  this.page.on('console', (msg) => {
+    if (msg.type() === 'error' || msg.text().includes('[')) {
+      console.log(`[page ${msg.type()}] ${msg.text()}`);
+    }
+  });
+  this.page.on('requestfailed', (req) => {
+    console.log(`[request FAILED] ${req.method()} ${req.url()} - ${req.failure()?.errorText}`);
+  });
+  this.page.on('response', (res) => {
+    const url = res.url();
+    if (url.includes('/api/') || url.includes('cognito')) {
+      console.log(`[response] ${res.status()} ${res.request().method()} ${url}`);
+    }
+  });
 });
 
 After<DaleWorld>({ tags: '@tutorial' }, async function () {
