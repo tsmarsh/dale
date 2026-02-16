@@ -1,4 +1,5 @@
 import { Before, After } from '@cucumber/cucumber';
+import { chromium } from 'playwright';
 import { DaleWorld } from './world.js';
 import { createTestUser, deleteTestUser } from './auth.js';
 import { cleanupDynamoDBTenant, cleanupSSMParams, cleanupWebhookSecret } from './cleanup.js';
@@ -9,7 +10,27 @@ Before<DaleWorld>({ tags: '@auth' }, async function () {
     this.config.userPoolClientId,
   );
   this.idToken = user.idToken;
+  this.accessToken = user.accessToken;
+  this.refreshToken = user.refreshToken;
   this.cognitoUsername = user.username;
+});
+
+Before<DaleWorld>({ tags: '@tutorial' }, async function () {
+  this.browser = await chromium.launch({ headless: true });
+  this.context = await this.browser.newContext({
+    viewport: { width: 1280, height: 800 },
+    deviceScaleFactor: 2,
+  });
+  this.page = await this.context.newPage();
+});
+
+After<DaleWorld>({ tags: '@tutorial' }, async function () {
+  if (this.browser) {
+    await this.browser.close();
+    this.browser = undefined;
+    this.context = undefined;
+    this.page = undefined;
+  }
 });
 
 After<DaleWorld>(async function () {

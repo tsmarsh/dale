@@ -13,6 +13,8 @@ const cognitoClient = new CognitoIdentityProviderClient({});
 export interface TestUser {
   username: string;
   idToken: string;
+  accessToken: string;
+  refreshToken: string;
 }
 
 export async function createTestUser(
@@ -56,11 +58,13 @@ export async function createTestUser(
   );
 
   const idToken = authResult.AuthenticationResult?.IdToken;
-  if (!idToken) {
-    throw new Error('Failed to get IdToken from Cognito');
+  const accessToken = authResult.AuthenticationResult?.AccessToken;
+  const refreshToken = authResult.AuthenticationResult?.RefreshToken;
+  if (!idToken || !accessToken || !refreshToken) {
+    throw new Error('Failed to get tokens from Cognito');
   }
 
-  return { username, idToken };
+  return { username, idToken, accessToken, refreshToken };
 }
 
 export async function deleteTestUser(

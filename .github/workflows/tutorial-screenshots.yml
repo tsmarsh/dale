@@ -1,0 +1,50 @@
+name: Tutorial Screenshots
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+        working-directory: e2e
+
+      - run: npx playwright install --with-deps chromium
+        working-directory: e2e
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Run tutorial scenarios
+        run: npx cucumber-js --tags @tutorial
+        working-directory: e2e
+        env:
+          E2E_ADMIN_API_URL: ${{ vars.E2E_ADMIN_API_URL }}
+          E2E_TELEGRAM_WEBHOOK_URL: ${{ vars.E2E_TELEGRAM_WEBHOOK_URL }}
+          E2E_STRIPE_WEBHOOK_URL: ${{ vars.E2E_STRIPE_WEBHOOK_URL }}
+          E2E_USER_POOL_ID: ${{ vars.E2E_USER_POOL_ID }}
+          E2E_USER_POOL_CLIENT_ID: ${{ vars.E2E_USER_POOL_CLIENT_ID }}
+          E2E_WEB_DISTRIBUTION_URL: ${{ vars.E2E_WEB_DISTRIBUTION_URL }}
+          E2E_TABLE_NAME: ${{ vars.E2E_TABLE_NAME }}
+
+      - name: Commit and push screenshots
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add site/screenshots/
+          git diff --staged --quiet || (git commit -m "Update tutorial screenshots" && git push)
