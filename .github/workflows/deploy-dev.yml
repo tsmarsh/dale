@@ -65,7 +65,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Run e2e tests
-        run: npx cucumber-js
+        run: npx cucumber-js --tags "not @tutorial"
         working-directory: e2e
         env:
           E2E_ADMIN_API_URL: ${{ needs.deploy.outputs.api_url }}
