@@ -36,12 +36,10 @@ export async function injectCognitoAuth(
 
   console.log(`[browser] Injecting auth — cognito username: ${cognitoUsername}, sub: ${sub}, email: ${username}`);
 
-  // Navigate to the app origin so localStorage writes go to the right domain
-  await page.goto(baseUrl, { waitUntil: 'commit' });
-
-  // Inject Cognito tokens into localStorage in the format Amplify v6 expects.
-  // Amplify reads LastAuthUser first, then uses that value to key into tokens.
-  await page.evaluate(
+  // Use addInitScript to inject tokens BEFORE any page JavaScript runs.
+  // This guarantees tokens are in localStorage before Amplify.configure() and
+  // getCurrentUser() execute, avoiding any race conditions.
+  await page.addInitScript(
     ({ clientId, cognitoUsername, sub, email, tokens }) => {
       const prefix = `CognitoIdentityServiceProvider.${clientId}`;
       localStorage.setItem(`${prefix}.LastAuthUser`, cognitoUsername);
@@ -54,31 +52,70 @@ export async function injectCognitoAuth(
         localStorage.setItem(`${prefix}.${key}.refreshToken`, tokens.refreshToken);
         localStorage.setItem(`${prefix}.${key}.clockDrift`, '0');
       }
+
+      // Ensure no stale OAuth inflight flag blocks token loading
+      localStorage.removeItem(`${prefix}.inflightOAuth`);
+
+      // Capture errors for debugging
+      (window as any).__amplifyErrors = [];
+      const origError = console.error;
+      console.error = (...args: any[]) => {
+        (window as any).__amplifyErrors.push(args.map(String).join(' '));
+        origError.apply(console, args);
+      };
     },
     { clientId, cognitoUsername, sub, email: username, tokens },
   );
 
-  // Debug: dump localStorage keys to verify they were set
-  const keys = await page.evaluate(() => {
-    const result: Record<string, string> = {};
+  // Also capture browser console logs server-side for debugging
+  page.on('console', (msg) => {
+    if (msg.type() === 'error' || msg.text().includes('Auth') || msg.text().includes('Cognito')) {
+      console.log(`[browser console ${msg.type()}] ${msg.text()}`);
+    }
+  });
+
+  // Navigate to the app — addInitScript runs before page JS, so Amplify
+  // will see our tokens when it initializes.
+  await page.goto(baseUrl, { waitUntil: 'networkidle' });
+
+  // Verify the deployed app's client ID matches what we injected.
+  // Amplify bakes VITE_USER_POOL_CLIENT_ID into the bundle at build time.
+  const appClientId = await page.evaluate(() => {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)!;
-      // Only show Cognito keys, truncate values
-      if (key.includes('Cognito')) {
-        const val = localStorage.getItem(key) ?? '';
-        result[key] = val.length > 40 ? val.substring(0, 40) + '...' : val;
+      if (key.includes('CognitoIdentityServiceProvider') && key.includes('LastAuthUser')) {
+        // Extract clientId from: CognitoIdentityServiceProvider.{clientId}.LastAuthUser
+        const parts = key.split('.');
+        return parts[1];
       }
     }
-    return result;
+    return null;
   });
-  console.log('[browser] localStorage after injection:', JSON.stringify(keys, null, 2));
+  console.log(`[browser] Injected clientId: ${clientId}, app clientId from localStorage: ${appClientId}`);
 
-  // Reload so Amplify picks up the injected tokens
-  await page.reload({ waitUntil: 'networkidle' });
+  // Check what the page shows after auth injection
+  const bodyText = await page.evaluate(() => document.body.innerText.substring(0, 300));
+  console.log('[browser] Page text after navigation:', bodyText);
 
-  // Debug: check if Amplify recognized the auth after reload
-  const bodyText = await page.evaluate(() => document.body.innerText.substring(0, 200));
-  console.log('[browser] Page text after reload:', bodyText);
+  // If we still see the sign-in page, dump localStorage for debugging
+  if (bodyText.includes('Sign in')) {
+    const lsKeys = await page.evaluate(() => {
+      const result: Record<string, string> = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)!;
+        if (key.includes('Cognito')) {
+          const val = localStorage.getItem(key) ?? '';
+          result[key] = val.length > 50 ? val.substring(0, 50) + '...' : val;
+        }
+      }
+      return result;
+    });
+    console.log('[browser] WARNING: Still on sign-in page. localStorage keys:', JSON.stringify(lsKeys, null, 2));
+
+    // Check for any console errors from the page
+    const consoleErrors = await page.evaluate(() => (window as any).__amplifyErrors ?? []);
+    console.log('[browser] Console errors:', JSON.stringify(consoleErrors));
+  }
 }
 
 export async function takeScreenshot(page: Page, name: string): Promise<void> {
