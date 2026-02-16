@@ -1,33 +1,61 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { getConfig } from '../shared/config.js';
-import { getUserProfile } from '../db/subscriptions.js';
+import { getPlatformConfig } from '../shared/config.js';
+import { getTenantIdByWebhookSecret } from '../shared/tenant-lookup.js';
+import { getTenantSecrets } from '../shared/tenant-config.js';
+import { getUserRoom, listUserRooms } from '../db/users.js';
+import { listRoomsForTenant, getRoomByTelegramGroupId } from '../db/rooms.js';
 import { sendMessage } from './api.js';
-import { validateTelegramSecret, parseTelegramUpdate, isSubscriptionActive } from './middleware.js';
-import {
-  handleStart,
-  handleStatus,
-  handleHelp,
-  handleCancel,
-  handleUnknownCommand,
-  handleNonSubscriber,
-} from './commands.js';
-
-const COMMANDS = new Set(['/start', '/status', '/help', '/cancel']);
+import { validateTelegramSecret, parseTelegramUpdate, isGroupChat } from './middleware.js';
+import { handleStartDM, handleStartGroup, handleStatus, handleHelp, handleUnknownCommand } from './commands.js';
+import { handleMyChatMember } from './group-handler.js';
 
 export async function handler(
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> {
   try {
-    const config = await getConfig();
+    const config = getPlatformConfig();
 
+    // Step 1: Extract webhook secret from header
     const secret = event.headers['x-telegram-bot-api-secret-token'];
-    if (!validateTelegramSecret(secret, config.telegramWebhookSecret)) {
-      console.warn('Invalid Telegram webhook secret');
+    if (!secret) {
       return { statusCode: 200, body: 'ok' };
     }
 
+    // Step 2: Look up tenant by webhook secret
+    const tenantId = await getTenantIdByWebhookSecret(config.tableName, secret);
+    if (!tenantId) {
+      console.warn('Unknown webhook secret');
+      return { statusCode: 200, body: 'ok' };
+    }
+
+    // Step 3: Load tenant secrets
+    const tenantSecrets = await getTenantSecrets(tenantId);
+
+    // Step 4: Validate the webhook secret matches tenant's expected secret
+    if (!validateTelegramSecret(secret, tenantSecrets.telegramWebhookSecret)) {
+      console.warn('Webhook secret mismatch for tenant', tenantId);
+      return { statusCode: 200, body: 'ok' };
+    }
+
+    // Step 5: Parse the update
     const update = parseTelegramUpdate(event.body ?? '');
-    if (!update?.message?.text || !update.message.from) {
+    if (!update) {
+      return { statusCode: 200, body: 'ok' };
+    }
+
+    // Step 6: Handle my_chat_member events (bot added/removed from groups)
+    if (update.my_chat_member) {
+      // Extract bot user ID from the token (first part before ':')
+      const botUserId = parseInt(tenantSecrets.telegramBotToken.split(':')[0], 10);
+      await handleMyChatMember(
+        { tableName: config.tableName, tenantId, botUserId },
+        update.my_chat_member,
+      );
+      return { statusCode: 200, body: 'ok' };
+    }
+
+    // Step 7: Handle messages
+    if (!update.message?.text || !update.message.from) {
       return { statusCode: 200, body: 'ok' };
     }
 
@@ -36,30 +64,40 @@ export async function handler(
     const telegramUserId = message.from!.id;
     const text = message.text!.trim();
     const command = text.split(' ')[0].split('@')[0].toLowerCase();
-
-    const profile = await getUserProfile(config.tableName, telegramUserId);
+    const inGroup = isGroupChat(message.chat.type);
 
     let response: string;
 
     if (command === '/start') {
-      response = handleStart(profile, config.paymentLink, telegramUserId);
+      if (inGroup) {
+        // In a group: show this room's payment link
+        const room = await getRoomByTelegramGroupId(config.tableName, chatId);
+        if (!room) {
+          response = 'This group is not linked to a room yet.';
+        } else {
+          const userRoom = await getUserRoom(config.tableName, tenantId, telegramUserId, room.roomId);
+          response = handleStartGroup(room, userRoom, tenantId, telegramUserId);
+        }
+      } else {
+        // In DM: show all rooms
+        const rooms = await listRoomsForTenant(config.tableName, tenantId);
+        const userRooms = await listUserRooms(config.tableName, tenantId, telegramUserId);
+        response = handleStartDM(rooms, userRooms, tenantId, telegramUserId);
+      }
     } else if (command === '/status') {
-      response = handleStatus(profile);
+      const rooms = await listRoomsForTenant(config.tableName, tenantId);
+      const userRooms = await listUserRooms(config.tableName, tenantId, telegramUserId);
+      response = handleStatus(userRooms, rooms);
     } else if (command === '/help') {
       response = handleHelp();
-    } else if (command === '/cancel') {
-      response = handleCancel();
     } else if (command.startsWith('/')) {
       response = handleUnknownCommand();
     } else {
-      if (!profile || !isSubscriptionActive(profile.subscriptionStatus)) {
-        response = handleNonSubscriber(config.paymentLink, telegramUserId);
-      } else {
-        response = `You said: ${text}`;
-      }
+      // Non-command messages in DM — ignore in multi-tenant
+      return { statusCode: 200, body: 'ok' };
     }
 
-    await sendMessage(chatId, response);
+    await sendMessage(tenantSecrets.telegramBotToken, chatId, response);
   } catch (error) {
     console.error('Telegram webhook error:', error);
   }

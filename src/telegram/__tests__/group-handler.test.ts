@@ -1,0 +1,85 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('../../db/rooms.js', () => ({
+  createRoom: vi.fn(),
+}));
+
+vi.mock('ulid', () => ({
+  ulid: vi.fn().mockReturnValue('01TEST'),
+}));
+
+import { handleMyChatMember } from '../group-handler.js';
+import { createRoom } from '../../db/rooms.js';
+import type { TelegramChatMemberUpdated } from '../../shared/types.js';
+
+const mockedCreateRoom = vi.mocked(createRoom);
+
+const TABLE = 'dale-test-table';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe('handleMyChatMember', () => {
+  const ctx = { tableName: TABLE, tenantId: 'tenant-1', botUserId: 123 };
+
+  it('creates room when bot is added as member', async () => {
+    const update: TelegramChatMemberUpdated = {
+      chat: { id: -100999, type: 'supergroup', title: 'My Group' },
+      from: { id: 456, is_bot: false, first_name: 'Admin' },
+      date: 1234567890,
+      old_chat_member: { user: { id: 123, is_bot: true, first_name: 'Bot' }, status: 'left' },
+      new_chat_member: { user: { id: 123, is_bot: true, first_name: 'Bot' }, status: 'member' },
+    };
+
+    await handleMyChatMember(ctx, update);
+
+    expect(mockedCreateRoom).toHaveBeenCalledWith(TABLE, {
+      tenantId: 'tenant-1',
+      roomId: '01TEST',
+      name: 'My Group',
+      telegramGroupId: -100999,
+      paymentLink: '',
+      isActive: false,
+    });
+  });
+
+  it('creates room when bot is made administrator', async () => {
+    const update: TelegramChatMemberUpdated = {
+      chat: { id: -100999, type: 'supergroup', title: 'My Group' },
+      from: { id: 456, is_bot: false, first_name: 'Admin' },
+      date: 1234567890,
+      old_chat_member: { user: { id: 123, is_bot: true, first_name: 'Bot' }, status: 'left' },
+      new_chat_member: { user: { id: 123, is_bot: true, first_name: 'Bot' }, status: 'administrator' },
+    };
+
+    await handleMyChatMember(ctx, update);
+    expect(mockedCreateRoom).toHaveBeenCalled();
+  });
+
+  it('does not create room when bot is removed', async () => {
+    const update: TelegramChatMemberUpdated = {
+      chat: { id: -100999, type: 'supergroup', title: 'My Group' },
+      from: { id: 456, is_bot: false, first_name: 'Admin' },
+      date: 1234567890,
+      old_chat_member: { user: { id: 123, is_bot: true, first_name: 'Bot' }, status: 'member' },
+      new_chat_member: { user: { id: 123, is_bot: true, first_name: 'Bot' }, status: 'left' },
+    };
+
+    await handleMyChatMember(ctx, update);
+    expect(mockedCreateRoom).not.toHaveBeenCalled();
+  });
+
+  it('ignores events for other users', async () => {
+    const update: TelegramChatMemberUpdated = {
+      chat: { id: -100999, type: 'supergroup', title: 'My Group' },
+      from: { id: 456, is_bot: false, first_name: 'Admin' },
+      date: 1234567890,
+      old_chat_member: { user: { id: 789, is_bot: false, first_name: 'Other' }, status: 'left' },
+      new_chat_member: { user: { id: 789, is_bot: false, first_name: 'Other' }, status: 'member' },
+    };
+
+    await handleMyChatMember(ctx, update);
+    expect(mockedCreateRoom).not.toHaveBeenCalled();
+  });
+});

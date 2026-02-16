@@ -1,0 +1,73 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install web dependencies
+        run: npm ci
+        working-directory: web
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: CDK deploy
+        run: npx cdk deploy -c env=${{ inputs.environment }} --require-approval never --outputs-file cdk-outputs.json
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          APPLE_CLIENT_ID: ${{ secrets.APPLE_CLIENT_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+          APPLE_PRIVATE_KEY: ${{ secrets.APPLE_PRIVATE_KEY }}
+
+      - name: Parse CDK outputs
+        id: outputs
+        run: |
+          STACK_NAME="Dale-$(echo '${{ inputs.environment }}' | sed 's/./\U&/' )"
+          echo "api_url=$(jq -r ".\"${STACK_NAME}\".AdminApiUrl" cdk-outputs.json)" >> "$GITHUB_OUTPUT"
+          echo "user_pool_id=$(jq -r ".\"${STACK_NAME}\".UserPoolId" cdk-outputs.json)" >> "$GITHUB_OUTPUT"
+          echo "user_pool_client_id=$(jq -r ".\"${STACK_NAME}\".UserPoolClientId" cdk-outputs.json)" >> "$GITHUB_OUTPUT"
+          echo "cognito_domain=$(jq -r ".\"${STACK_NAME}\".CognitoDomain" cdk-outputs.json)" >> "$GITHUB_OUTPUT"
+          echo "web_distribution_url=$(jq -r ".\"${STACK_NAME}\".WebDistributionUrl" cdk-outputs.json)" >> "$GITHUB_OUTPUT"
+          echo "web_bucket_name=$(jq -r ".\"${STACK_NAME}\".WebBucketName" cdk-outputs.json)" >> "$GITHUB_OUTPUT"
+          echo "distribution_id=$(jq -r ".\"${STACK_NAME}\".DistributionId" cdk-outputs.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Build web app
+        run: npm run build
+        working-directory: web
+        env:
+          VITE_API_URL: ${{ steps.outputs.outputs.api_url }}
+          VITE_USER_POOL_ID: ${{ steps.outputs.outputs.user_pool_id }}
+          VITE_USER_POOL_CLIENT_ID: ${{ steps.outputs.outputs.user_pool_client_id }}
+          VITE_COGNITO_DOMAIN: ${{ steps.outputs.outputs.cognito_domain }}
+
+      - name: Deploy web to S3
+        run: aws s3 sync web/dist s3://${{ steps.outputs.outputs.web_bucket_name }} --delete
+
+      - name: Invalidate CloudFront cache
+        run: aws cloudfront create-invalidation --distribution-id ${{ steps.outputs.outputs.distribution_id }} --paths "/*"

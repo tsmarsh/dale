@@ -20,3 +20,7 @@ export function parseTelegramUpdate(body: string): TelegramUpdate | null {
 export function isSubscriptionActive(status: SubscriptionStatus): boolean {
   return status === 'active';
 }
+
+export function isGroupChat(chatType: string): boolean {
+  return chatType === 'group' || chatType === 'supergroup';
+}

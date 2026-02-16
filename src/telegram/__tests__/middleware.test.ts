@@ -3,7 +3,8 @@ import {
   validateTelegramSecret,
   parseTelegramUpdate,
   isSubscriptionActive,
-} from './middleware.js';
+  isGroupChat,
+} from '../middleware.js';
 
 describe('validateTelegramSecret', () => {
   it('returns true for matching secret', () => {
@@ -60,5 +61,19 @@ describe('isSubscriptionActive', () => {
 
   it('returns false for none', () => {
     expect(isSubscriptionActive('none')).toBe(false);
+  });
+});
+
+describe('isGroupChat', () => {
+  it('returns true for group', () => {
+    expect(isGroupChat('group')).toBe(true);
+  });
+
+  it('returns true for supergroup', () => {
+    expect(isGroupChat('supergroup')).toBe(true);
+  });
+
+  it('returns false for private', () => {
+    expect(isGroupChat('private')).toBe(false);
   });
 });

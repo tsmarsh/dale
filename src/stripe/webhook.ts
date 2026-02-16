@@ -1,6 +1,7 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import Stripe from 'stripe';
-import { getConfig } from '../shared/config.js';
+import { getPlatformConfig } from '../shared/config.js';
+import { getTenantSecrets } from '../shared/tenant-config.js';
 import {
   handleCheckoutCompleted,
   handleInvoicePaid,
@@ -12,8 +13,23 @@ import {
 export async function handler(
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> {
-  const config = await getConfig();
-  const stripe = new Stripe(config.stripeSecretKey);
+  const config = getPlatformConfig();
+
+  // Extract tenant from query string
+  const tenantId = event.queryStringParameters?.tenant;
+  if (!tenantId) {
+    return { statusCode: 400, body: 'Missing tenant parameter' };
+  }
+
+  let tenantSecrets;
+  try {
+    tenantSecrets = await getTenantSecrets(tenantId);
+  } catch (err) {
+    console.error(`Failed to load secrets for tenant ${tenantId}:`, err);
+    return { statusCode: 500, body: 'Tenant configuration error' };
+  }
+
+  const stripe = new Stripe(tenantSecrets.stripeSecretKey);
 
   const signature = event.headers['stripe-signature'];
   if (!signature || !event.body) {
@@ -25,7 +41,7 @@ export async function handler(
     stripeEvent = stripe.webhooks.constructEvent(
       event.body,
       signature,
-      config.stripeWebhookSecret,
+      tenantSecrets.stripeWebhookSecret,
     );
   } catch (err) {
     console.error('Stripe signature verification failed:', err);
@@ -37,30 +53,38 @@ export async function handler(
       case 'checkout.session.completed':
         await handleCheckoutCompleted(
           config.tableName,
+          tenantId,
+          tenantSecrets.telegramBotToken,
           stripeEvent.data.object as Stripe.Checkout.Session,
         );
         break;
       case 'invoice.paid':
         await handleInvoicePaid(
           config.tableName,
+          tenantId,
           stripeEvent.data.object as Stripe.Invoice,
         );
         break;
       case 'invoice.payment_failed':
         await handleInvoicePaymentFailed(
           config.tableName,
+          tenantId,
+          tenantSecrets.telegramBotToken,
           stripeEvent.data.object as Stripe.Invoice,
         );
         break;
       case 'customer.subscription.deleted':
         await handleSubscriptionDeleted(
           config.tableName,
+          tenantId,
+          tenantSecrets.telegramBotToken,
           stripeEvent.data.object as Stripe.Subscription,
         );
         break;
       case 'customer.subscription.updated':
         await handleSubscriptionUpdated(
           config.tableName,
+          tenantId,
           stripeEvent.data.object as Stripe.Subscription,
         );
         break;
