@@ -99,3 +99,74 @@ jobs:
 
       - name: Invalidate CloudFront cache
         run: aws cloudfront create-invalidation --distribution-id ${{ steps.outputs.outputs.distribution_id }} --paths "/*"
+
+      - name: Post-deploy smoke test
+        run: |
+          API_URL="${{ steps.outputs.outputs.api_url }}"
+          TELEGRAM_URL="${{ steps.outputs.outputs.telegram_webhook_url }}"
+          STRIPE_URL="${{ steps.outputs.outputs.stripe_webhook_url }}"
+          WEB_URL="${{ steps.outputs.outputs.web_distribution_url }}"
+          USER_POOL_ID="${{ steps.outputs.outputs.user_pool_id }}"
+          CLIENT_ID="${{ steps.outputs.outputs.user_pool_client_id }}"
+
+          PASS=0
+          FAIL=0
+
+          check() {
+            local name="$1" result="$2"
+            if [ "$result" -eq 0 ]; then
+              echo "✅ $name"
+              PASS=$((PASS + 1))
+            else
+              echo "❌ $name"
+              FAIL=$((FAIL + 1))
+            fi
+          }
+
+          # 1. Admin API alive — expect 401 (no auth token)
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' "${API_URL}tenant")
+          [ "$STATUS" = "401" ]
+          check "Admin API returns 401 without auth" $?
+
+          # 2. Telegram webhook alive — expect 200
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{}' "$TELEGRAM_URL")
+          [ "$STATUS" = "200" ]
+          check "Telegram webhook returns 200" $?
+
+          # 3. Stripe webhook validates tenant param — expect 400 without ?tenant=
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{}' "$STRIPE_URL")
+          [ "$STATUS" = "400" ]
+          check "Stripe webhook returns 400 without tenant param" $?
+
+          # 4. CORS preflight on Admin API
+          HEADERS=$(curl -s -D - -o /dev/null -X OPTIONS \
+            -H 'Origin: https://example.com' \
+            -H 'Access-Control-Request-Method: GET' \
+            "${API_URL}tenant")
+          echo "$HEADERS" | grep -qi 'access-control-allow-origin'
+          check "CORS preflight returns allow-origin header" $?
+
+          # 5. Web app serves SPA (retry up to 30s for CloudFront propagation)
+          WEB_OK=1
+          for i in $(seq 1 6); do
+            BODY=$(curl -s "$WEB_URL")
+            if echo "$BODY" | grep -qi '<!doctype html'; then
+              WEB_OK=0
+              break
+            fi
+            sleep 5
+          done
+          check "Web app serves HTML from CloudFront" $WEB_OK
+
+          # 6. Cognito OAuth callback URLs include CloudFront URL
+          CALLBACKS=$(aws cognito-idp describe-user-pool-client \
+            --user-pool-id "$USER_POOL_ID" \
+            --client-id "$CLIENT_ID" \
+            --query 'UserPoolClient.CallbackURLs' \
+            --output text)
+          echo "$CALLBACKS" | grep -q "$WEB_URL"
+          check "Cognito callback URLs contain CloudFront URL" $?
+
+          echo ""
+          echo "Smoke test: $PASS passed, $FAIL failed"
+          [ "$FAIL" -eq 0 ]
