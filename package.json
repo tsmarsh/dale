@@ -6,7 +6,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "cdk": "cdk",
-    "synth": "cdk synth"
+    "synth": "cdk synth",
+    "test:e2e": "cd e2e && npx cucumber-js"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.700.0",

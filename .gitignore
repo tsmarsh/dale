@@ -8,3 +8,5 @@ cdk.out/
 !vitest.config.ts
 !cdk.json
 cdk-outputs.json
+e2e/node_modules/
+e2e/reports/

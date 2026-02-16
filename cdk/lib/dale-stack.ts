@@ -89,5 +89,9 @@ export class DaleStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'DistributionId', {
       value: webHosting.distribution.distributionId,
     });
+
+    new cdk.CfnOutput(this, 'TableName', {
+      value: database.table.tableName,
+    });
   }
 }

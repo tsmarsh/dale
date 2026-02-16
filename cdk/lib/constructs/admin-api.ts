@@ -90,6 +90,9 @@ export class AdminApi extends Construct {
 
     // User pool client
     this.userPoolClient = this.userPool.addClient('WebClient', {
+      authFlows: {
+        adminUserPassword: props.envName !== 'prod',
+      },
       oAuth: {
         flows: { authorizationCodeGrant: true },
         scopes: [cognito.OAuthScope.OPENID, cognito.OAuthScope.EMAIL, cognito.OAuthScope.PROFILE],

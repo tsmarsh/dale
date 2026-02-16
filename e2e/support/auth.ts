@@ -1,0 +1,82 @@
+import {
+  CognitoIdentityProviderClient,
+  AdminCreateUserCommand,
+  AdminSetUserPasswordCommand,
+  AdminInitiateAuthCommand,
+  AdminDeleteUserCommand,
+  AuthFlowType,
+  MessageActionType,
+} from '@aws-sdk/client-cognito-identity-provider';
+
+const cognitoClient = new CognitoIdentityProviderClient({});
+
+export interface TestUser {
+  username: string;
+  idToken: string;
+}
+
+export async function createTestUser(
+  userPoolId: string,
+  clientId: string,
+): Promise<TestUser> {
+  const username = `e2e-test-${Date.now()}@test.dale.dev`;
+  const password = `E2eTest!${Date.now()}`;
+
+  await cognitoClient.send(
+    new AdminCreateUserCommand({
+      UserPoolId: userPoolId,
+      Username: username,
+      UserAttributes: [
+        { Name: 'email', Value: username },
+        { Name: 'email_verified', Value: 'true' },
+      ],
+      MessageAction: MessageActionType.SUPPRESS,
+    }),
+  );
+
+  await cognitoClient.send(
+    new AdminSetUserPasswordCommand({
+      UserPoolId: userPoolId,
+      Username: username,
+      Password: password,
+      Permanent: true,
+    }),
+  );
+
+  const authResult = await cognitoClient.send(
+    new AdminInitiateAuthCommand({
+      UserPoolId: userPoolId,
+      ClientId: clientId,
+      AuthFlow: AuthFlowType.ADMIN_USER_PASSWORD_AUTH,
+      AuthParameters: {
+        USERNAME: username,
+        PASSWORD: password,
+      },
+    }),
+  );
+
+  const idToken = authResult.AuthenticationResult?.IdToken;
+  if (!idToken) {
+    throw new Error('Failed to get IdToken from Cognito');
+  }
+
+  return { username, idToken };
+}
+
+export async function deleteTestUser(
+  userPoolId: string,
+  username: string,
+): Promise<void> {
+  try {
+    await cognitoClient.send(
+      new AdminDeleteUserCommand({
+        UserPoolId: userPoolId,
+        Username: username,
+      }),
+    );
+  } catch (err: any) {
+    if (err.name !== 'UserNotFoundException') {
+      throw err;
+    }
+  }
+}
