@@ -41,10 +41,17 @@ When<DaleWorld>('I navigate to the settings page', { timeout: 15000 }, async fun
   await this.page.goto(`${this.config.webDistributionUrl}/settings`, { waitUntil: 'networkidle' });
 });
 
-When<DaleWorld>('I fill in {string} with {string}', { timeout: 10000 }, async function (placeholder: string, value: string) {
+When<DaleWorld>('I fill in {string} with {string}', { timeout: 15000 }, async function (placeholder: string, value: string) {
   assert.ok(this.page);
   const input = this.page.locator(`input[placeholder="${placeholder}"]`);
-  await input.fill(value);
+  try {
+    await input.fill(value);
+  } catch (err) {
+    await takeScreenshot(this.page, '_debug-fill-failed');
+    const bodyText = await this.page.evaluate(() => document.body.innerText.substring(0, 500));
+    console.log(`[debug] Fill failed: placeholder="${placeholder}", page text: ${bodyText}`);
+    throw err;
+  }
 });
 
 When<DaleWorld>('I click {string}', { timeout: 10000 }, async function (text: string) {
@@ -61,7 +68,15 @@ When<DaleWorld>('I click on the room {string}', { timeout: 15000 }, async functi
 
 Then<DaleWorld>('I should see {string}', { timeout: 15000 }, async function (text: string) {
   assert.ok(this.page);
-  await this.page.waitForSelector(`text=${text}`, { timeout: 10000 });
+  try {
+    await this.page.waitForSelector(`text=${text}`, { timeout: 10000 });
+  } catch (err) {
+    // Capture debug screenshot and page text on failure
+    await takeScreenshot(this.page, '_debug-assertion-failed');
+    const bodyText = await this.page.evaluate(() => document.body.innerText.substring(0, 500));
+    console.log(`[debug] Assertion failed: expected "${text}", page text: ${bodyText}`);
+    throw err;
+  }
 });
 
 Then<DaleWorld>('I take a screenshot named {string}', { timeout: 10000 }, async function (name: string) {
