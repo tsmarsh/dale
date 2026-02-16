@@ -58,8 +58,27 @@ export async function injectCognitoAuth(
     { clientId, cognitoUsername, sub, email: username, tokens },
   );
 
+  // Debug: dump localStorage keys to verify they were set
+  const keys = await page.evaluate(() => {
+    const result: Record<string, string> = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)!;
+      // Only show Cognito keys, truncate values
+      if (key.includes('Cognito')) {
+        const val = localStorage.getItem(key) ?? '';
+        result[key] = val.length > 40 ? val.substring(0, 40) + '...' : val;
+      }
+    }
+    return result;
+  });
+  console.log('[browser] localStorage after injection:', JSON.stringify(keys, null, 2));
+
   // Reload so Amplify picks up the injected tokens
   await page.reload({ waitUntil: 'networkidle' });
+
+  // Debug: check if Amplify recognized the auth after reload
+  const bodyText = await page.evaluate(() => document.body.innerText.substring(0, 200));
+  console.log('[browser] Page text after reload:', bodyText);
 }
 
 export async function takeScreenshot(page: Page, name: string): Promise<void> {
