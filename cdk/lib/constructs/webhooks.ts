@@ -13,6 +13,7 @@ export interface WebhooksProps {
   table: dynamodb.Table;
   ssmParamArns: string[];
   telegramTestMode?: boolean;
+  paypalBaseUrl?: string;
 }
 
 export class Webhooks extends Construct {
@@ -63,7 +64,10 @@ export class Webhooks extends Construct {
       runtime: Runtime.NODEJS_20_X,
       entry: path.join(__dirname, '../../../src/paypal/webhook.ts'),
       handler: 'handler',
-      environment: commonEnv,
+      environment: {
+        ...commonEnv,
+        PAYPAL_BASE_URL: props.paypalBaseUrl ?? 'https://api-m.paypal.com',
+      },
       bundling,
       timeout: cdk.Duration.seconds(15),
     });

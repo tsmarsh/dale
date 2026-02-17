@@ -9,6 +9,7 @@ export interface DaleStackProps extends cdk.StackProps {
   envName: string;
   retainData: boolean;
   telegramTestMode?: boolean;
+  paypalBaseUrl?: string;
 }
 
 export class DaleStack extends cdk.Stack {
@@ -29,6 +30,7 @@ export class DaleStack extends cdk.Stack {
       table: database.table,
       ssmParamArns,
       telegramTestMode: props.telegramTestMode,
+      paypalBaseUrl: props.paypalBaseUrl,
     });
 
     // Web Hosting (S3 + CloudFront) — before AdminApi so CloudFront domain is available
@@ -46,6 +48,7 @@ export class DaleStack extends cdk.Stack {
       telegramWebhookUrl: webhooks.telegramUrl.url,
       stripeWebhookUrl: webhooks.stripeUrl.url,
       paypalWebhookUrl: webhooks.paypalUrl.url,
+      paypalBaseUrl: props.paypalBaseUrl,
       envName: props.envName,
       googleClientId: process.env.GOOGLE_CLIENT_ID,
       googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,

@@ -3,6 +3,7 @@ import { verifyPayPalWebhook } from '../verify.js';
 import type { TenantSecrets } from '../../shared/types.js';
 
 const originalFetch = global.fetch;
+const BASE_URL = 'https://api-m.paypal.com';
 
 const TENANT_SECRETS: TenantSecrets = {
   telegramBotToken: '123:ABC',
@@ -34,7 +35,7 @@ describe('verifyPayPalWebhook', () => {
       telegramBotToken: '123:ABC',
       telegramWebhookSecret: 'test',
     };
-    const result = await verifyPayPalWebhook(HEADERS, '{}', secrets);
+    const result = await verifyPayPalWebhook(BASE_URL, HEADERS, '{}', secrets);
     expect(result).toBe(false);
   });
 
@@ -49,7 +50,7 @@ describe('verifyPayPalWebhook', () => {
         json: () => Promise.resolve({ verification_status: 'SUCCESS' }),
       });
 
-    const result = await verifyPayPalWebhook(HEADERS, '{"event_type":"test"}', TENANT_SECRETS);
+    const result = await verifyPayPalWebhook(BASE_URL, HEADERS, '{"event_type":"test"}', TENANT_SECRETS);
     expect(result).toBe(true);
 
     const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls;
@@ -71,7 +72,7 @@ describe('verifyPayPalWebhook', () => {
         json: () => Promise.resolve({ verification_status: 'FAILURE' }),
       });
 
-    const result = await verifyPayPalWebhook(HEADERS, '{}', TENANT_SECRETS);
+    const result = await verifyPayPalWebhook(BASE_URL, HEADERS, '{}', TENANT_SECRETS);
     expect(result).toBe(false);
   });
 
@@ -86,7 +87,7 @@ describe('verifyPayPalWebhook', () => {
         status: 500,
       });
 
-    const result = await verifyPayPalWebhook(HEADERS, '{}', TENANT_SECRETS);
+    const result = await verifyPayPalWebhook(BASE_URL, HEADERS, '{}', TENANT_SECRETS);
     expect(result).toBe(false);
   });
 
@@ -96,6 +97,6 @@ describe('verifyPayPalWebhook', () => {
       status: 401,
     });
 
-    await expect(verifyPayPalWebhook(HEADERS, '{}', TENANT_SECRETS)).rejects.toThrow('PayPal token request failed');
+    await expect(verifyPayPalWebhook(BASE_URL, HEADERS, '{}', TENANT_SECRETS)).rejects.toThrow('PayPal token request failed');
   });
 });

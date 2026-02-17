@@ -1,33 +1,12 @@
 import type { TenantSecrets } from '../shared/types.js';
-
-interface PayPalTokenResponse {
-  access_token: string;
-  token_type: string;
-}
+import { getAccessToken } from './client.js';
 
 interface PayPalVerifyResponse {
   verification_status: 'SUCCESS' | 'FAILURE';
 }
 
-async function getAccessToken(clientId: string, clientSecret: string): Promise<string> {
-  const response = await fetch('https://api-m.paypal.com/v1/oauth2/token', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: 'grant_type=client_credentials',
-  });
-
-  if (!response.ok) {
-    throw new Error(`PayPal token request failed: ${response.status}`);
-  }
-
-  const data = await response.json() as PayPalTokenResponse;
-  return data.access_token;
-}
-
 export async function verifyPayPalWebhook(
+  baseUrl: string,
   headers: Record<string, string | undefined>,
   body: string,
   tenantSecrets: TenantSecrets,
@@ -36,9 +15,9 @@ export async function verifyPayPalWebhook(
     return false;
   }
 
-  const accessToken = await getAccessToken(tenantSecrets.paypalClientId, tenantSecrets.paypalClientSecret);
+  const accessToken = await getAccessToken(baseUrl, tenantSecrets.paypalClientId, tenantSecrets.paypalClientSecret);
 
-  const response = await fetch('https://api-m.paypal.com/v1/notifications/verify-webhook-signature', {
+  const response = await fetch(`${baseUrl}/v1/notifications/verify-webhook-signature`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${accessToken}`,

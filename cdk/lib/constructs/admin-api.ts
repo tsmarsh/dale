@@ -19,6 +19,7 @@ export interface AdminApiProps {
   telegramWebhookUrl: string;
   stripeWebhookUrl: string;
   paypalWebhookUrl: string;
+  paypalBaseUrl?: string;
   envName: string;
   telegramTestMode?: boolean;
   googleClientId?: string;
@@ -120,6 +121,7 @@ export class AdminApi extends Construct {
         TELEGRAM_WEBHOOK_URL: props.telegramWebhookUrl,
         STRIPE_WEBHOOK_URL: props.stripeWebhookUrl,
         PAYPAL_WEBHOOK_URL: props.paypalWebhookUrl,
+        PAYPAL_BASE_URL: props.paypalBaseUrl ?? 'https://api-m.paypal.com',
         COGNITO_USER_POOL_ID: this.userPool.userPoolId,
         ...(props.telegramTestMode ? { TELEGRAM_TEST_MODE: 'true' } : {}),
       },

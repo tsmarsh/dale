@@ -9,6 +9,7 @@ import { handleRegisterWebhook } from './routes/webhooks.js';
 import { handleInviteUser, handleListUsers } from './routes/invite.js';
 import { createWebhookSecretMapping } from '../db/webhook-secrets.js';
 import { setWebhook } from '../telegram/api.js';
+import { registerPayPalWebhook } from '../paypal/client.js';
 import { ulid } from 'ulid';
 import { randomBytes } from 'crypto';
 
@@ -65,9 +66,11 @@ export async function handler(
         storeSecrets,
         createWebhookSecretMapping,
         setWebhook,
+        registerPayPalWebhook,
         telegramWebhookUrl: config.telegramWebhookUrl,
         stripeWebhookUrl: config.stripeWebhookUrl,
         paypalWebhookUrl: config.paypalWebhookUrl,
+        paypalBaseUrl: config.paypalBaseUrl,
       }),
     );
   }

@@ -35,6 +35,14 @@ export async function handleUpdateTenant(
   return { statusCode: 200, body: JSON.stringify({ updated: true }) };
 }
 
+const PAYPAL_WEBHOOK_EVENT_TYPES = [
+  'BILLING.SUBSCRIPTION.ACTIVATED',
+  'BILLING.SUBSCRIPTION.CANCELLED',
+  'BILLING.SUBSCRIPTION.SUSPENDED',
+  'PAYMENT.SALE.COMPLETED',
+  'PAYMENT.SALE.DENIED',
+];
+
 export async function handleOnboard(
   tableName: string,
   cognitoSub: string,
@@ -45,9 +53,11 @@ export async function handleOnboard(
     storeSecrets: (tenantId: string, secrets: Record<string, string>) => Promise<void>;
     createWebhookSecretMapping: (tableName: string, secret: string, tenantId: string) => Promise<void>;
     setWebhook: (botToken: string, webhookUrl: string, secretToken: string) => Promise<boolean>;
+    registerPayPalWebhook: (baseUrl: string, clientId: string, clientSecret: string, webhookUrl: string, eventTypes: string[]) => Promise<string>;
     telegramWebhookUrl: string;
     stripeWebhookUrl: string;
     paypalWebhookUrl: string;
+    paypalBaseUrl: string;
   },
 ): Promise<{ statusCode: number; body: string }> {
   let parsed: {
@@ -57,7 +67,6 @@ export async function handleOnboard(
     stripeWebhookSecret?: string;
     paypalClientId?: string;
     paypalClientSecret?: string;
-    paypalWebhookId?: string;
   };
   try {
     parsed = JSON.parse(body);
@@ -70,7 +79,7 @@ export async function handleOnboard(
   }
 
   const hasStripe = !!(parsed.stripeSecretKey && parsed.stripeWebhookSecret);
-  const hasPayPal = !!(parsed.paypalClientId && parsed.paypalClientSecret && parsed.paypalWebhookId);
+  const hasPayPal = !!(parsed.paypalClientId && parsed.paypalClientSecret);
 
   if (!hasStripe && !hasPayPal) {
     return { statusCode: 400, body: JSON.stringify({ error: 'At least one payment provider (Stripe or PayPal) is required' }) };
@@ -78,6 +87,24 @@ export async function handleOnboard(
 
   const tenantId = deps.generateId();
   const webhookSecret = deps.generateSecret();
+
+  // Register PayPal webhook if needed
+  let paypalWebhookId: string | undefined;
+  if (hasPayPal) {
+    try {
+      const webhookUrl = `${deps.paypalWebhookUrl}?tenant=${tenantId}`;
+      paypalWebhookId = await deps.registerPayPalWebhook(
+        deps.paypalBaseUrl,
+        parsed.paypalClientId!,
+        parsed.paypalClientSecret!,
+        webhookUrl,
+        PAYPAL_WEBHOOK_EVENT_TYPES,
+      );
+    } catch (err) {
+      console.error('PayPal webhook registration failed:', err);
+      return { statusCode: 502, body: JSON.stringify({ error: 'PayPal webhook registration failed' }) };
+    }
+  }
 
   // Store secrets in SSM
   const secrets: Record<string, string> = {
@@ -91,7 +118,7 @@ export async function handleOnboard(
   if (hasPayPal) {
     secrets['paypal-client-id'] = parsed.paypalClientId!;
     secrets['paypal-client-secret'] = parsed.paypalClientSecret!;
-    secrets['paypal-webhook-id'] = parsed.paypalWebhookId!;
+    secrets['paypal-webhook-id'] = paypalWebhookId!;
   }
   await deps.storeSecrets(tenantId, secrets);
 

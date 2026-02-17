@@ -37,7 +37,7 @@ export async function handler(
     return { statusCode: 400, body: 'Missing body' };
   }
 
-  const verified = await verifyPayPalWebhook(event.headers, event.body, tenantSecrets);
+  const verified = await verifyPayPalWebhook(config.paypalBaseUrl, event.headers, event.body, tenantSecrets);
   if (!verified) {
     return { statusCode: 400, body: 'Invalid signature' };
   }
