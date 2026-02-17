@@ -16,6 +16,7 @@ export async function createRoom(
     description: room.description,
     telegramGroupId: room.telegramGroupId,
     paymentLink: room.paymentLink,
+    paypalPaymentLink: room.paypalPaymentLink,
     priceDescription: room.priceDescription,
     isActive: room.isActive,
     createdAt: now,
@@ -88,6 +89,7 @@ export async function updateRoom(
     description?: string;
     telegramGroupId?: number;
     paymentLink?: string;
+    paypalPaymentLink?: string;
     priceDescription?: string;
     isActive?: boolean;
   },
@@ -119,6 +121,11 @@ export async function updateRoom(
     expressionParts.push('#paymentLink = :paymentLink');
     names['#paymentLink'] = 'paymentLink';
     values[':paymentLink'] = updates.paymentLink;
+  }
+  if (updates.paypalPaymentLink !== undefined) {
+    expressionParts.push('#paypalPaymentLink = :paypalPaymentLink');
+    names['#paypalPaymentLink'] = 'paypalPaymentLink';
+    values[':paypalPaymentLink'] = updates.paypalPaymentLink;
   }
   if (updates.priceDescription !== undefined) {
     expressionParts.push('#priceDescription = :priceDescription');

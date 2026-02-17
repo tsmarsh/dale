@@ -23,6 +23,7 @@ export interface Room {
   description?: string;
   telegramGroupId?: number;
   paymentLink: string;
+  paypalPaymentLink?: string;
   priceDescription?: string;
   isActive: boolean;
   createdAt: string;
@@ -58,6 +59,8 @@ export interface UserRoom {
   subscriptionStatus: SubscriptionStatus;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
+  paypalPayerId?: string;
+  paypalSubscriptionId?: string;
   createdAt: string;
   updatedAt: string;
   GSI1pk: string; // TGUSER#{telegramUserId}
@@ -75,13 +78,27 @@ export interface StripeMapping {
   GSI1sk: string; // TENANT#{tenantId}
 }
 
+export interface PayPalMapping {
+  pk: string; // TENANT#{tenantId}
+  sk: string; // PAYPALCUST#{paypalPayerId}
+  tenantId: string;
+  paypalPayerId: string;
+  telegramUserId: number;
+  createdAt: string;
+  GSI1pk: string; // PAYPALCUST#{paypalPayerId}
+  GSI1sk: string; // TENANT#{tenantId}
+}
+
 // --- Tenant secrets (from SSM) ---
 
 export interface TenantSecrets {
   telegramBotToken: string;
   telegramWebhookSecret: string;
-  stripeSecretKey: string;
-  stripeWebhookSecret: string;
+  stripeSecretKey?: string;
+  stripeWebhookSecret?: string;
+  paypalClientId?: string;
+  paypalClientSecret?: string;
+  paypalWebhookId?: string;
 }
 
 // --- Platform config (env vars only) ---
@@ -90,6 +107,7 @@ export interface PlatformConfig {
   tableName: string;
   telegramWebhookUrl: string;
   stripeWebhookUrl: string;
+  paypalWebhookUrl: string;
 }
 
 // --- Telegram types ---

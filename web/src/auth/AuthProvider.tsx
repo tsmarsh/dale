@@ -1,11 +1,20 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { getCurrentUser, signInWithRedirect, signOut, fetchAuthSession } from '@aws-amplify/auth';
+import {
+  getCurrentUser,
+  signInWithRedirect,
+  signOut,
+  signIn,
+  confirmSignIn,
+  fetchAuthSession,
+} from '@aws-amplify/auth';
 
 interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   userId: string | null;
-  signIn: () => void;
+  signInWithEmail: (email: string, password: string) => Promise<{ newPasswordRequired: boolean }>;
+  completeNewPassword: (newPassword: string) => Promise<void>;
+  signInWithGoogle: () => void;
   signOut: () => Promise<void>;
   getToken: () => Promise<string | null>;
 }
@@ -14,7 +23,9 @@ const AuthContext = createContext<AuthState>({
   isAuthenticated: false,
   isLoading: true,
   userId: null,
-  signIn: () => {},
+  signInWithEmail: async () => ({ newPasswordRequired: false }),
+  completeNewPassword: async () => {},
+  signInWithGoogle: () => {},
   signOut: async () => {},
   getToken: async () => null,
 });
@@ -41,7 +52,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function handleSignIn() {
+  async function handleSignInWithEmail(
+    email: string,
+    password: string,
+  ): Promise<{ newPasswordRequired: boolean }> {
+    const result = await signIn({ username: email, password });
+    if (
+      result.nextStep?.signInStep === 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED'
+    ) {
+      return { newPasswordRequired: true };
+    }
+    await checkAuth();
+    return { newPasswordRequired: false };
+  }
+
+  async function handleCompleteNewPassword(newPassword: string): Promise<void> {
+    await confirmSignIn({ challengeResponse: newPassword });
+    await checkAuth();
+  }
+
+  function handleSignInWithGoogle() {
     signInWithRedirect({ provider: { custom: 'Google' } });
   }
 
@@ -66,7 +96,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
         isLoading,
         userId,
-        signIn: handleSignIn,
+        signInWithEmail: handleSignInWithEmail,
+        completeNewPassword: handleCompleteNewPassword,
+        signInWithGoogle: handleSignInWithGoogle,
         signOut: handleSignOut,
         getToken,
       }}

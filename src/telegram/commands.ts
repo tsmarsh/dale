@@ -22,9 +22,16 @@ export function handleStartDM(
     if (activeRoomIds.has(room.roomId)) {
       lines.push(`✅ *${room.name}* — subscribed`);
     } else {
-      const link = `${room.paymentLink}?client_reference_id=${tenantId}:${telegramUserId}:${room.roomId}`;
+      const ref = `${tenantId}:${telegramUserId}:${room.roomId}`;
       const desc = room.priceDescription ? ` (${room.priceDescription})` : '';
-      lines.push(`🔒 *${room.name}*${desc}\nSubscribe: ${link}`);
+      const links: string[] = [];
+      if (room.paymentLink) {
+        links.push(`Stripe: ${room.paymentLink}?client_reference_id=${ref}`);
+      }
+      if (room.paypalPaymentLink) {
+        links.push(`PayPal: ${room.paypalPaymentLink}&custom_id=${ref}`);
+      }
+      lines.push(`🔒 *${room.name}*${desc}\n${links.join('\n')}`);
     }
   }
   return lines.join('\n');
@@ -39,8 +46,15 @@ export function handleStartGroup(
   if (userRoom && userRoom.subscriptionStatus === 'active') {
     return `Welcome back to *${room.name}*! Your subscription is active.`;
   }
-  const link = `${room.paymentLink}?client_reference_id=${tenantId}:${telegramUserId}:${room.roomId}`;
-  return `Welcome to *${room.name}*! Subscribe here to get access:\n${link}`;
+  const ref = `${tenantId}:${telegramUserId}:${room.roomId}`;
+  const links: string[] = [];
+  if (room.paymentLink) {
+    links.push(`Stripe: ${room.paymentLink}?client_reference_id=${ref}`);
+  }
+  if (room.paypalPaymentLink) {
+    links.push(`PayPal: ${room.paypalPaymentLink}&custom_id=${ref}`);
+  }
+  return `Welcome to *${room.name}*! Subscribe here to get access:\n${links.join('\n')}`;
 }
 
 export function handleStatus(userRooms: UserRoom[], rooms: Room[]): string {

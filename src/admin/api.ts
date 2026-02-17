@@ -6,6 +6,7 @@ import { handleGetTenant, handleUpdateTenant, handleOnboard } from './routes/ten
 import { handleListRooms, handleGetRoom, handleCreateRoom, handleUpdateRoom } from './routes/rooms.js';
 import { handleListSubscribers } from './routes/subscribers.js';
 import { handleRegisterWebhook } from './routes/webhooks.js';
+import { handleInviteUser, handleListUsers } from './routes/invite.js';
 import { createWebhookSecretMapping } from '../db/webhook-secrets.js';
 import { setWebhook } from '../telegram/api.js';
 import { ulid } from 'ulid';
@@ -66,6 +67,7 @@ export async function handler(
         setWebhook,
         telegramWebhookUrl: config.telegramWebhookUrl,
         stripeWebhookUrl: config.stripeWebhookUrl,
+        paypalWebhookUrl: config.paypalWebhookUrl,
       }),
     );
   }
@@ -113,6 +115,17 @@ export async function handler(
   // Webhook registration
   if (path === '/api/tenant/register-webhook' && method === 'POST') {
     return json(await handleRegisterWebhook(auth, config.telegramWebhookUrl));
+  }
+
+  // Invite / user management
+  const userPoolId = process.env.COGNITO_USER_POOL_ID;
+  if (userPoolId) {
+    if (path === '/api/admin/invite' && method === 'POST') {
+      return json(await handleInviteUser(userPoolId, event.body ?? ''));
+    }
+    if (path === '/api/admin/users' && method === 'GET') {
+      return json(await handleListUsers(userPoolId));
+    }
   }
 
   return json({ statusCode: 404, body: JSON.stringify({ error: 'Not found' }) });

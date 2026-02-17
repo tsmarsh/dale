@@ -29,6 +29,10 @@ export async function handler(
     return { statusCode: 500, body: 'Tenant configuration error' };
   }
 
+  if (!tenantSecrets.stripeSecretKey || !tenantSecrets.stripeWebhookSecret) {
+    return { statusCode: 400, body: 'Stripe not configured for this tenant' };
+  }
+
   const stripe = new Stripe(tenantSecrets.stripeSecretKey);
 
   const signature = event.headers['stripe-signature'];

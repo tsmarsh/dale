@@ -27,6 +27,11 @@ vi.mock('../routes/webhooks.js', () => ({
   handleRegisterWebhook: vi.fn().mockResolvedValue({ statusCode: 200, body: '{}' }),
 }));
 
+vi.mock('../routes/invite.js', () => ({
+  handleInviteUser: vi.fn().mockResolvedValue({ statusCode: 201, body: '{"email":"a@b.com","invited":true}' }),
+  handleListUsers: vi.fn().mockResolvedValue({ statusCode: 200, body: '[]' }),
+}));
+
 vi.mock('../../db/webhook-secrets.js', () => ({
   createWebhookSecretMapping: vi.fn(),
 }));
@@ -105,6 +110,16 @@ describe('Admin API handler', () => {
     mockedAuth.mockResolvedValue(null);
     const result = await handler(makeEvent('GET', '/api/tenant'));
     expect(result.statusCode).toBe(401);
+  });
+
+  it('routes POST /api/admin/invite', async () => {
+    const result = await handler(makeEvent('POST', '/api/admin/invite', '{"email":"a@b.com"}'));
+    expect(result.statusCode).toBe(201);
+  });
+
+  it('routes GET /api/admin/users', async () => {
+    const result = await handler(makeEvent('GET', '/api/admin/users'));
+    expect(result.statusCode).toBe(200);
   });
 
   it('returns 404 for unknown routes', async () => {

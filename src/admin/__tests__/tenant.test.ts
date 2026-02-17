@@ -63,7 +63,7 @@ describe('handleUpdateTenant', () => {
 });
 
 describe('handleOnboard', () => {
-  it('creates tenant and returns tenantId', async () => {
+  it('creates tenant with Stripe and returns tenantId', async () => {
     const mockStoreSecrets = vi.fn();
     const mockCreateWebhookSecretMapping = vi.fn();
     const mockSetWebhook = vi.fn().mockResolvedValue(true);
@@ -81,6 +81,7 @@ describe('handleOnboard', () => {
       setWebhook: mockSetWebhook,
       telegramWebhookUrl: 'https://tg.example.com',
       stripeWebhookUrl: 'https://stripe.example.com',
+      paypalWebhookUrl: 'https://paypal.example.com',
     });
 
     expect(result.statusCode).toBe(201);
@@ -88,6 +89,7 @@ describe('handleOnboard', () => {
     expect(body.tenantId).toBe('new-tenant-id');
     expect(body.webhookRegistered).toBe(true);
     expect(body.stripeWebhookUrl).toBe('https://stripe.example.com?tenant=new-tenant-id');
+    expect(body.paypalWebhookUrl).toBeUndefined();
 
     expect(mockStoreSecrets).toHaveBeenCalledWith('new-tenant-id', {
       'telegram-bot-token': '123:ABC',
@@ -95,6 +97,73 @@ describe('handleOnboard', () => {
       'stripe-secret-key': 'sk_test',
       'stripe-webhook-secret': 'whsec_test',
     });
+  });
+
+  it('creates tenant with PayPal only', async () => {
+    const mockStoreSecrets = vi.fn();
+    const mockCreateWebhookSecretMapping = vi.fn();
+    const mockSetWebhook = vi.fn().mockResolvedValue(true);
+
+    const result = await handleOnboard(TABLE, 'sub-123', JSON.stringify({
+      displayName: 'PayPal Creator',
+      telegramBotToken: '123:ABC',
+      paypalClientId: 'pp-client',
+      paypalClientSecret: 'pp-secret',
+      paypalWebhookId: 'WH-123',
+    }), {
+      generateId: () => 'pp-tenant-id',
+      generateSecret: () => 'webhook-secret',
+      storeSecrets: mockStoreSecrets,
+      createWebhookSecretMapping: mockCreateWebhookSecretMapping,
+      setWebhook: mockSetWebhook,
+      telegramWebhookUrl: 'https://tg.example.com',
+      stripeWebhookUrl: 'https://stripe.example.com',
+      paypalWebhookUrl: 'https://paypal.example.com',
+    });
+
+    expect(result.statusCode).toBe(201);
+    const body = JSON.parse(result.body);
+    expect(body.tenantId).toBe('pp-tenant-id');
+    expect(body.paypalWebhookUrl).toBe('https://paypal.example.com?tenant=pp-tenant-id');
+    expect(body.stripeWebhookUrl).toBeUndefined();
+
+    expect(mockStoreSecrets).toHaveBeenCalledWith('pp-tenant-id', {
+      'telegram-bot-token': '123:ABC',
+      'telegram-webhook-secret': 'webhook-secret',
+      'paypal-client-id': 'pp-client',
+      'paypal-client-secret': 'pp-secret',
+      'paypal-webhook-id': 'WH-123',
+    });
+  });
+
+  it('creates tenant with both providers', async () => {
+    const mockStoreSecrets = vi.fn();
+    const mockCreateWebhookSecretMapping = vi.fn();
+    const mockSetWebhook = vi.fn().mockResolvedValue(true);
+
+    const result = await handleOnboard(TABLE, 'sub-123', JSON.stringify({
+      displayName: 'Both Creator',
+      telegramBotToken: '123:ABC',
+      stripeSecretKey: 'sk_test',
+      stripeWebhookSecret: 'whsec_test',
+      paypalClientId: 'pp-client',
+      paypalClientSecret: 'pp-secret',
+      paypalWebhookId: 'WH-123',
+    }), {
+      generateId: () => 'both-tenant-id',
+      generateSecret: () => 'webhook-secret',
+      storeSecrets: mockStoreSecrets,
+      createWebhookSecretMapping: mockCreateWebhookSecretMapping,
+      setWebhook: mockSetWebhook,
+      telegramWebhookUrl: 'https://tg.example.com',
+      stripeWebhookUrl: 'https://stripe.example.com',
+      paypalWebhookUrl: 'https://paypal.example.com',
+    });
+
+    expect(result.statusCode).toBe(201);
+    const body = JSON.parse(result.body);
+    expect(body.stripeWebhookUrl).toBe('https://stripe.example.com?tenant=both-tenant-id');
+    expect(body.paypalWebhookUrl).toBe('https://paypal.example.com?tenant=both-tenant-id');
   });
 
   it('returns 400 for missing fields', async () => {
@@ -106,7 +175,26 @@ describe('handleOnboard', () => {
       setWebhook: vi.fn(),
       telegramWebhookUrl: '',
       stripeWebhookUrl: '',
+      paypalWebhookUrl: '',
     });
     expect(result.statusCode).toBe(400);
+  });
+
+  it('returns 400 when no payment provider given', async () => {
+    const result = await handleOnboard(TABLE, 'sub-123', JSON.stringify({
+      displayName: 'Test',
+      telegramBotToken: '123:ABC',
+    }), {
+      generateId: () => 'id',
+      generateSecret: () => 'secret',
+      storeSecrets: vi.fn(),
+      createWebhookSecretMapping: vi.fn(),
+      setWebhook: vi.fn(),
+      telegramWebhookUrl: '',
+      stripeWebhookUrl: '',
+      paypalWebhookUrl: '',
+    });
+    expect(result.statusCode).toBe(400);
+    expect(JSON.parse(result.body).error).toContain('payment provider');
   });
 });

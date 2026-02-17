@@ -66,6 +66,16 @@ describe('Stripe webhook handler', () => {
     expect(result.body).toContain('tenant');
   });
 
+  it('returns 400 when Stripe not configured', async () => {
+    mockedGetSecrets.mockResolvedValue({
+      telegramBotToken: '123:ABC',
+      telegramWebhookSecret: 'test-webhook-secret',
+    });
+    const result = await handler(makeEvent('{}'));
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toContain('Stripe not configured');
+  });
+
   it('returns 400 for missing signature', async () => {
     const event = {
       headers: {},

@@ -10,6 +10,7 @@ export interface RoomResponse {
   description?: string;
   telegramGroupId?: number;
   paymentLink: string;
+  paypalPaymentLink?: string;
   priceDescription?: string;
   isActive: boolean;
   createdAt: string;
@@ -25,20 +26,25 @@ export interface SubscriberResponse {
 export interface OnboardRequest {
   displayName: string;
   telegramBotToken: string;
-  stripeSecretKey: string;
-  stripeWebhookSecret: string;
+  stripeSecretKey?: string;
+  stripeWebhookSecret?: string;
+  paypalClientId?: string;
+  paypalClientSecret?: string;
+  paypalWebhookId?: string;
 }
 
 export interface OnboardResponse {
   tenantId: string;
   webhookRegistered: boolean;
-  stripeWebhookUrl: string;
+  stripeWebhookUrl?: string;
+  paypalWebhookUrl?: string;
 }
 
 export interface CreateRoomRequest {
   name: string;
   description?: string;
-  paymentLink: string;
+  paymentLink?: string;
+  paypalPaymentLink?: string;
   priceDescription?: string;
 }
 
@@ -46,6 +52,22 @@ export interface UpdateRoomRequest {
   name?: string;
   description?: string;
   paymentLink?: string;
+  paypalPaymentLink?: string;
   priceDescription?: string;
   isActive?: boolean;
+}
+
+export interface InviteRequest {
+  email: string;
+}
+
+export interface InviteResponse {
+  email: string;
+  invited: boolean;
+}
+
+export interface AdminUser {
+  email: string;
+  status: string;
+  createdAt: string;
 }

@@ -7,21 +7,29 @@ export function RoomListPage() {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [paymentLink, setPaymentLink] = useState('');
+  const [paypalPaymentLink, setPaypalPaymentLink] = useState('');
   const [creating, setCreating] = useState(false);
 
   async function handleCreate() {
     setCreating(true);
     try {
-      await createRoom({ name, paymentLink });
+      await createRoom({
+        name,
+        paymentLink: paymentLink || undefined,
+        paypalPaymentLink: paypalPaymentLink || undefined,
+      });
       setShowForm(false);
       setName('');
       setPaymentLink('');
+      setPaypalPaymentLink('');
     } catch (err) {
       console.error('Failed to create room:', err);
     } finally {
       setCreating(false);
     }
   }
+
+  const hasLink = !!(paymentLink || paypalPaymentLink);
 
   if (loading) return <p>Loading rooms...</p>;
   if (error) return <p className="error-text">{error}</p>;
@@ -48,12 +56,20 @@ export function RoomListPage() {
           <div className="form-group">
             <input
               type="text"
-              placeholder="Stripe payment link URL"
+              placeholder="Stripe payment link URL (optional)"
               value={paymentLink}
               onChange={(e) => setPaymentLink(e.target.value)}
             />
           </div>
-          <button className="btn-primary" onClick={handleCreate} disabled={!name || !paymentLink || creating}>
+          <div className="form-group">
+            <input
+              type="text"
+              placeholder="PayPal subscription link URL (optional)"
+              value={paypalPaymentLink}
+              onChange={(e) => setPaypalPaymentLink(e.target.value)}
+            />
+          </div>
+          <button className="btn-primary" onClick={handleCreate} disabled={!name || !hasLink || creating}>
             {creating ? 'Creating...' : 'Create'}
           </button>
         </div>

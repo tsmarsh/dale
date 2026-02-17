@@ -18,6 +18,7 @@ export interface AdminApiProps {
   ssmParamArns: string[];
   telegramWebhookUrl: string;
   stripeWebhookUrl: string;
+  paypalWebhookUrl: string;
   envName: string;
   googleClientId?: string;
   googleClientSecret?: string;
@@ -91,6 +92,7 @@ export class AdminApi extends Construct {
     // User pool client
     this.userPoolClient = this.userPool.addClient('WebClient', {
       authFlows: {
+        userPassword: true,
         adminUserPassword: props.envName !== 'prod',
       },
       oAuth: {
@@ -115,6 +117,8 @@ export class AdminApi extends Construct {
         TABLE_NAME: props.table.tableName,
         TELEGRAM_WEBHOOK_URL: props.telegramWebhookUrl,
         STRIPE_WEBHOOK_URL: props.stripeWebhookUrl,
+        PAYPAL_WEBHOOK_URL: props.paypalWebhookUrl,
+        COGNITO_USER_POOL_ID: this.userPool.userPoolId,
       },
       bundling: {
         externalModules: ['@aws-sdk/*'],
@@ -132,6 +136,12 @@ export class AdminApi extends Construct {
       resources: props.ssmParamArns,
     });
     adminHandler.addToRolePolicy(ssmPolicy);
+
+    const cognitoPolicy = new iam.PolicyStatement({
+      actions: ['cognito-idp:AdminCreateUser', 'cognito-idp:ListUsers'],
+      resources: [this.userPool.userPoolArn],
+    });
+    adminHandler.addToRolePolicy(cognitoPolicy);
 
     // JWT authorizer
     const issuer = `https://cognito-idp.${cdk.Aws.REGION}.amazonaws.com/${this.userPool.userPoolId}`;

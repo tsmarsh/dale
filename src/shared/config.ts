@@ -10,8 +10,9 @@ export function getPlatformConfig(): PlatformConfig {
 
   const telegramWebhookUrl = process.env.TELEGRAM_WEBHOOK_URL ?? '';
   const stripeWebhookUrl = process.env.STRIPE_WEBHOOK_URL ?? '';
+  const paypalWebhookUrl = process.env.PAYPAL_WEBHOOK_URL ?? '';
 
-  cachedConfig = { tableName, telegramWebhookUrl, stripeWebhookUrl };
+  cachedConfig = { tableName, telegramWebhookUrl, stripeWebhookUrl, paypalWebhookUrl };
   return cachedConfig;
 }
 

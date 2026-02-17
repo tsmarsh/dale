@@ -42,6 +42,7 @@ export class DaleStack extends cdk.Stack {
       ssmParamArns,
       telegramWebhookUrl: webhooks.telegramUrl.url,
       stripeWebhookUrl: webhooks.stripeUrl.url,
+      paypalWebhookUrl: webhooks.paypalUrl.url,
       envName: props.envName,
       googleClientId: process.env.GOOGLE_CLIENT_ID,
       googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -60,6 +61,10 @@ export class DaleStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, 'StripeWebhookUrl', {
       value: webhooks.stripeUrl.url,
+    });
+
+    new cdk.CfnOutput(this, 'PayPalWebhookUrl', {
+      value: webhooks.paypalUrl.url,
     });
 
     new cdk.CfnOutput(this, 'AdminApiUrl', {

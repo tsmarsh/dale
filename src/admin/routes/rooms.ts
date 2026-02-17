@@ -15,6 +15,7 @@ export async function handleListRooms(
       description: r.description,
       telegramGroupId: r.telegramGroupId,
       paymentLink: r.paymentLink,
+      paypalPaymentLink: r.paypalPaymentLink,
       priceDescription: r.priceDescription,
       isActive: r.isActive,
       createdAt: r.createdAt,
@@ -39,6 +40,7 @@ export async function handleGetRoom(
       description: room.description,
       telegramGroupId: room.telegramGroupId,
       paymentLink: room.paymentLink,
+      paypalPaymentLink: room.paypalPaymentLink,
       priceDescription: room.priceDescription,
       isActive: room.isActive,
       createdAt: room.createdAt,
@@ -51,15 +53,15 @@ export async function handleCreateRoom(
   auth: AuthContext,
   body: string,
 ): Promise<{ statusCode: number; body: string }> {
-  let parsed: { name: string; description?: string; paymentLink: string; priceDescription?: string };
+  let parsed: { name: string; description?: string; paymentLink?: string; paypalPaymentLink?: string; priceDescription?: string };
   try {
     parsed = JSON.parse(body);
   } catch {
     return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) };
   }
 
-  if (!parsed.name || !parsed.paymentLink) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Missing required fields: name, paymentLink' }) };
+  if (!parsed.name || (!parsed.paymentLink && !parsed.paypalPaymentLink)) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Missing required fields: name and at least one payment link' }) };
   }
 
   const room = await createRoom(tableName, {
@@ -67,7 +69,8 @@ export async function handleCreateRoom(
     roomId: ulid(),
     name: parsed.name,
     description: parsed.description,
-    paymentLink: parsed.paymentLink,
+    paymentLink: parsed.paymentLink ?? '',
+    paypalPaymentLink: parsed.paypalPaymentLink,
     priceDescription: parsed.priceDescription,
     isActive: true,
   });
@@ -84,7 +87,7 @@ export async function handleUpdateRoom(
   roomId: string,
   body: string,
 ): Promise<{ statusCode: number; body: string }> {
-  let parsed: { name?: string; description?: string; paymentLink?: string; priceDescription?: string; isActive?: boolean };
+  let parsed: { name?: string; description?: string; paymentLink?: string; paypalPaymentLink?: string; priceDescription?: string; isActive?: boolean };
   try {
     parsed = JSON.parse(body);
   } catch {

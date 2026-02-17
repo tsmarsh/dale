@@ -21,7 +21,7 @@ export function RoomDetailPage() {
     try {
       const data = await api.get<RoomResponse>(`/api/rooms/${roomId}`);
       setRoom(data);
-      setForm({ name: data.name, description: data.description, paymentLink: data.paymentLink, isActive: data.isActive });
+      setForm({ name: data.name, description: data.description, paymentLink: data.paymentLink, paypalPaymentLink: data.paypalPaymentLink, isActive: data.isActive });
     } catch (err) {
       console.error('Failed to load room:', err);
     } finally {
@@ -53,8 +53,12 @@ export function RoomDetailPage() {
             <input type="text" value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
           <div className="form-group">
-            <label>Payment Link:</label>
+            <label>Stripe Payment Link:</label>
             <input type="text" value={form.paymentLink ?? ''} onChange={(e) => setForm({ ...form, paymentLink: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>PayPal Subscription Link:</label>
+            <input type="text" value={form.paypalPaymentLink ?? ''} onChange={(e) => setForm({ ...form, paypalPaymentLink: e.target.value })} />
           </div>
           <div className="form-group">
             <label>
@@ -71,7 +75,8 @@ export function RoomDetailPage() {
           <p>Status: <span className={`badge ${room.isActive ? 'badge-active' : 'badge-inactive'}`}>{room.isActive ? 'Active' : 'Inactive'}</span></p>
           {room.description && <p>Description: {room.description}</p>}
           {room.telegramGroupId && <p>Telegram Group: {room.telegramGroupId}</p>}
-          <p>Payment Link: <code>{room.paymentLink}</code></p>
+          {room.paymentLink && <p>Stripe Payment Link: <code>{room.paymentLink}</code></p>}
+          {room.paypalPaymentLink && <p>PayPal Subscription Link: <code>{room.paypalPaymentLink}</code></p>}
           <button className="btn-primary" onClick={() => setEditing(true)} style={{ marginTop: '0.5rem' }}>Edit</button>
         </div>
       )}

@@ -17,6 +17,7 @@ export interface WebhooksProps {
 export class Webhooks extends Construct {
   public readonly telegramUrl: cdk.aws_lambda.FunctionUrl;
   public readonly stripeUrl: cdk.aws_lambda.FunctionUrl;
+  public readonly paypalUrl: cdk.aws_lambda.FunctionUrl;
 
   constructor(scope: Construct, id: string, props: WebhooksProps) {
     super(scope, id);
@@ -56,8 +57,18 @@ export class Webhooks extends Construct {
       timeout: cdk.Duration.seconds(15),
     });
 
+    const paypalHandler = new lambda.NodejsFunction(this, 'PayPalHandler', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../../src/paypal/webhook.ts'),
+      handler: 'handler',
+      environment: commonEnv,
+      bundling,
+      timeout: cdk.Duration.seconds(15),
+    });
+
     props.table.grantReadWriteData(telegramHandler);
     props.table.grantReadWriteData(stripeHandler);
+    props.table.grantReadWriteData(paypalHandler);
 
     const ssmPolicy = new iam.PolicyStatement({
       actions: ['ssm:GetParameter', 'ssm:GetParametersByPath'],
@@ -65,12 +76,17 @@ export class Webhooks extends Construct {
     });
     telegramHandler.addToRolePolicy(ssmPolicy);
     stripeHandler.addToRolePolicy(ssmPolicy);
+    paypalHandler.addToRolePolicy(ssmPolicy);
 
     this.telegramUrl = telegramHandler.addFunctionUrl({
       authType: FunctionUrlAuthType.NONE,
     });
 
     this.stripeUrl = stripeHandler.addFunctionUrl({
+      authType: FunctionUrlAuthType.NONE,
+    });
+
+    this.paypalUrl = paypalHandler.addFunctionUrl({
       authType: FunctionUrlAuthType.NONE,
     });
   }

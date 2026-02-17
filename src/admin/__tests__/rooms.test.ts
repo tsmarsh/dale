@@ -60,7 +60,7 @@ describe('handleGetRoom', () => {
 });
 
 describe('handleCreateRoom', () => {
-  it('creates room and returns roomId', async () => {
+  it('creates room with Stripe link and returns roomId', async () => {
     const result = await handleCreateRoom(TABLE, AUTH, JSON.stringify({
       name: 'New Room',
       paymentLink: 'https://pay',
@@ -70,9 +70,27 @@ describe('handleCreateRoom', () => {
     expect(body.roomId).toBe('01ROOM');
   });
 
-  it('returns 400 for missing fields', async () => {
+  it('creates room with PayPal link only', async () => {
+    const result = await handleCreateRoom(TABLE, AUTH, JSON.stringify({
+      name: 'PayPal Room',
+      paypalPaymentLink: 'https://paypal.com/subscribe?plan_id=P-123',
+    }));
+    expect(result.statusCode).toBe(201);
+  });
+
+  it('creates room with both links', async () => {
+    const result = await handleCreateRoom(TABLE, AUTH, JSON.stringify({
+      name: 'Both Room',
+      paymentLink: 'https://stripe-pay',
+      paypalPaymentLink: 'https://paypal-pay',
+    }));
+    expect(result.statusCode).toBe(201);
+  });
+
+  it('returns 400 when no payment link provided', async () => {
     const result = await handleCreateRoom(TABLE, AUTH, JSON.stringify({ name: 'No Link' }));
     expect(result.statusCode).toBe(400);
+    expect(JSON.parse(result.body).error).toContain('payment link');
   });
 });
 

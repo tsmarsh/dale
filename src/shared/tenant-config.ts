@@ -42,16 +42,22 @@ export async function getTenantSecrets(tenantId: string): Promise<TenantSecrets>
   const telegramWebhookSecret = params.get('telegram-webhook-secret');
   const stripeSecretKey = params.get('stripe-secret-key');
   const stripeWebhookSecret = params.get('stripe-webhook-secret');
+  const paypalClientId = params.get('paypal-client-id');
+  const paypalClientSecret = params.get('paypal-client-secret');
+  const paypalWebhookId = params.get('paypal-webhook-id');
 
-  if (!telegramBotToken || !telegramWebhookSecret || !stripeSecretKey || !stripeWebhookSecret) {
+  if (!telegramBotToken || !telegramWebhookSecret) {
     throw new Error(`Missing SSM parameters for tenant ${tenantId}`);
   }
 
   const secrets: TenantSecrets = {
     telegramBotToken,
     telegramWebhookSecret,
-    stripeSecretKey,
-    stripeWebhookSecret,
+    stripeSecretKey: stripeSecretKey || undefined,
+    stripeWebhookSecret: stripeWebhookSecret || undefined,
+    paypalClientId: paypalClientId || undefined,
+    paypalClientSecret: paypalClientSecret || undefined,
+    paypalWebhookId: paypalWebhookId || undefined,
   };
 
   cache.set(tenantId, { secrets, expiresAt: Date.now() + TTL_MS });
