@@ -13,6 +13,7 @@ export class DaleWorld extends World {
   accessToken?: string;
   refreshToken?: string;
   cognitoUsername?: string;
+  srpPassword?: string;
 
   // Response state
   lastResponse?: HttpResponse;
