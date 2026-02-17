@@ -18,6 +18,10 @@ export class DaleWorld extends World {
   // Entity state for multi-step scenarios
   lastRoomId?: string;
 
+  // Telegram simulation state
+  webhookSecret?: string;
+  telegramGroupId?: number;
+
   // Browser state (tutorial scenarios)
   browser?: Browser;
   context?: BrowserContext;
