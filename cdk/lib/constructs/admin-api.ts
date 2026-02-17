@@ -20,6 +20,7 @@ export interface AdminApiProps {
   stripeWebhookUrl: string;
   paypalWebhookUrl: string;
   envName: string;
+  telegramTestMode?: boolean;
   googleClientId?: string;
   googleClientSecret?: string;
   appleClientId?: string;
@@ -119,6 +120,7 @@ export class AdminApi extends Construct {
         STRIPE_WEBHOOK_URL: props.stripeWebhookUrl,
         PAYPAL_WEBHOOK_URL: props.paypalWebhookUrl,
         COGNITO_USER_POOL_ID: this.userPool.userPoolId,
+        ...(props.telegramTestMode ? { TELEGRAM_TEST_MODE: 'true' } : {}),
       },
       bundling: {
         externalModules: ['@aws-sdk/*'],

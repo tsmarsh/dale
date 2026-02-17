@@ -75,3 +75,8 @@ jobs:
           E2E_USER_POOL_CLIENT_ID: ${{ needs.deploy.outputs.user_pool_client_id }}
           E2E_WEB_DISTRIBUTION_URL: ${{ needs.deploy.outputs.web_distribution_url }}
           E2E_TABLE_NAME: ${{ needs.deploy.outputs.table_name }}
+          E2E_TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          E2E_TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+          E2E_TELEGRAM_TEST_SESSION: ${{ secrets.TELEGRAM_TEST_SESSION }}
+          E2E_TELEGRAM_TEST_BOT_TOKEN: ${{ secrets.TELEGRAM_TEST_BOT_TOKEN }}
+          E2E_TELEGRAM_TEST_BOT_USERNAME: ${{ secrets.TELEGRAM_TEST_BOT_USERNAME }}

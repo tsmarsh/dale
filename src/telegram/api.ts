@@ -1,5 +1,10 @@
+function telegramUrl(botToken: string, method: string): string {
+  const testPrefix = process.env.TELEGRAM_TEST_MODE === 'true' ? '/test' : '';
+  return `https://api.telegram.org/bot${botToken}${testPrefix}/${method}`;
+}
+
 export async function sendMessage(botToken: string, chatId: number, text: string): Promise<void> {
-  const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+  const url = telegramUrl(botToken, 'sendMessage');
 
   const response = await fetch(url, {
     method: 'POST',
@@ -22,7 +27,7 @@ export async function setWebhook(
   webhookUrl: string,
   secretToken: string,
 ): Promise<boolean> {
-  const url = `https://api.telegram.org/bot${botToken}/setWebhook`;
+  const url = telegramUrl(botToken, 'setWebhook');
 
   const response = await fetch(url, {
     method: 'POST',

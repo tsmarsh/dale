@@ -8,6 +8,7 @@ import { WebHosting } from './constructs/web-hosting.js';
 export interface DaleStackProps extends cdk.StackProps {
   envName: string;
   retainData: boolean;
+  telegramTestMode?: boolean;
 }
 
 export class DaleStack extends cdk.Stack {
@@ -27,6 +28,7 @@ export class DaleStack extends cdk.Stack {
     const webhooks = new Webhooks(this, 'Webhooks', {
       table: database.table,
       ssmParamArns,
+      telegramTestMode: props.telegramTestMode,
     });
 
     // Web Hosting (S3 + CloudFront) — before AdminApi so CloudFront domain is available
@@ -40,6 +42,7 @@ export class DaleStack extends cdk.Stack {
     const adminApi = new AdminApi(this, 'AdminApi', {
       table: database.table,
       ssmParamArns,
+      telegramTestMode: props.telegramTestMode,
       telegramWebhookUrl: webhooks.telegramUrl.url,
       stripeWebhookUrl: webhooks.stripeUrl.url,
       paypalWebhookUrl: webhooks.paypalUrl.url,

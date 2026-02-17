@@ -3,6 +3,7 @@ import { chromium } from 'playwright';
 import { DaleWorld } from './world.js';
 import { createTestUser, deleteTestUser } from './auth.js';
 import { cleanupDynamoDBTenant, cleanupSSMParams, cleanupWebhookSecret } from './cleanup.js';
+import { createTelegramClient, deleteGroup } from './gramjs.js';
 
 Before<DaleWorld>({ tags: '@auth' }, async function () {
   const user = await createTestUser(
@@ -13,6 +14,25 @@ Before<DaleWorld>({ tags: '@auth' }, async function () {
   this.accessToken = user.accessToken;
   this.refreshToken = user.refreshToken;
   this.cognitoUsername = user.username;
+});
+
+Before<DaleWorld>({ tags: '@real-telegram' }, async function () {
+  const { telegramApiId, telegramApiHash, telegramTestSession, telegramTestBotToken, telegramTestBotUsername } = this.config;
+  if (!telegramApiId || !telegramApiHash || !telegramTestSession || !telegramTestBotToken || !telegramTestBotUsername) {
+    return 'skipped';
+  }
+  this.telegramClient = await createTelegramClient(this.config);
+});
+
+After<DaleWorld>({ tags: '@real-telegram' }, async function () {
+  if (this.telegramClient && this.telegramRealChatId) {
+    await deleteGroup(this.telegramClient, this.telegramRealChatId);
+    this.telegramRealChatId = undefined;
+  }
+  if (this.telegramClient) {
+    await this.telegramClient.disconnect();
+    this.telegramClient = undefined;
+  }
 });
 
 Before<DaleWorld>({ tags: '@tutorial' }, async function () {

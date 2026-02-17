@@ -20,4 +20,5 @@ const stackName = `Dale-${envName.charAt(0).toUpperCase()}${envName.slice(1)}`;
 new DaleStack(app, stackName, {
   envName,
   retainData: envConfig.retainData,
+  telegramTestMode: envConfig.telegramTestMode,
 });

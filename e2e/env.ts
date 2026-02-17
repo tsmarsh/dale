@@ -11,6 +11,13 @@ export interface E2EConfig {
   webDistributionUrl: string;
   tableName: string;
   region: string;
+
+  // Optional: Telegram test DC config for @real-telegram scenarios
+  telegramApiId?: number;
+  telegramApiHash?: string;
+  telegramTestSession?: string;
+  telegramTestBotToken?: string;
+  telegramTestBotUsername?: string;
 }
 
 function getDir(): string {
@@ -43,6 +50,8 @@ export function loadConfig(): E2EConfig {
     return value;
   }
 
+  const apiId = process.env.E2E_TELEGRAM_API_ID;
+
   return {
     adminApiUrl: get('E2E_ADMIN_API_URL', 'AdminApiUrl'),
     telegramWebhookUrl: get('E2E_TELEGRAM_WEBHOOK_URL', 'TelegramWebhookUrl'),
@@ -52,5 +61,11 @@ export function loadConfig(): E2EConfig {
     webDistributionUrl: get('E2E_WEB_DISTRIBUTION_URL', 'WebDistributionUrl'),
     tableName: get('E2E_TABLE_NAME', 'TableName'),
     region: process.env.E2E_REGION ?? process.env.AWS_REGION ?? 'us-east-1',
+
+    telegramApiId: apiId ? parseInt(apiId, 10) : undefined,
+    telegramApiHash: process.env.E2E_TELEGRAM_API_HASH,
+    telegramTestSession: process.env.E2E_TELEGRAM_TEST_SESSION,
+    telegramTestBotToken: process.env.E2E_TELEGRAM_TEST_BOT_TOKEN,
+    telegramTestBotUsername: process.env.E2E_TELEGRAM_TEST_BOT_USERNAME,
   };
 }

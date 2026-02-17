@@ -2,6 +2,8 @@ import { World, setWorldConstructor } from '@cucumber/cucumber';
 import { E2EConfig, loadConfig } from '../env.js';
 import { HttpResponse } from './http.js';
 import type { Browser, BrowserContext, Page } from 'playwright';
+import type { TelegramClient } from 'telegram';
+import type { BigInteger } from 'big-integer';
 
 export class DaleWorld extends World {
   config: E2EConfig;
@@ -21,6 +23,11 @@ export class DaleWorld extends World {
   // Telegram simulation state
   webhookSecret?: string;
   telegramGroupId?: number;
+
+  // GramJS state (real Telegram scenarios)
+  telegramClient?: TelegramClient;
+  telegramRealChatId?: BigInteger;
+  botReply?: string;
 
   // Browser state (tutorial scenarios)
   browser?: Browser;

@@ -6,6 +6,7 @@ global.fetch = mockFetch;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  delete process.env.TELEGRAM_TEST_MODE;
 });
 
 describe('sendMessage', () => {
@@ -64,5 +65,33 @@ describe('setWebhook', () => {
 
     const result = await setWebhook('123:ABC', 'https://example.com/webhook', 'secret-123');
     expect(result).toBe(false);
+  });
+});
+
+describe('test DC mode', () => {
+  it('sendMessage uses /test/ prefix when TELEGRAM_TEST_MODE is true', async () => {
+    process.env.TELEGRAM_TEST_MODE = 'true';
+    mockFetch.mockResolvedValue({ ok: true });
+
+    await sendMessage('123:ABC', 456, 'Hello!');
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bot123:ABC/test/sendMessage',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('setWebhook uses /test/ prefix when TELEGRAM_TEST_MODE is true', async () => {
+    process.env.TELEGRAM_TEST_MODE = 'true';
+    mockFetch.mockResolvedValue({
+      json: async () => ({ ok: true }),
+    });
+
+    await setWebhook('123:ABC', 'https://example.com/webhook', 'secret-123');
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.telegram.org/bot123:ABC/test/setWebhook',
+      expect.objectContaining({ method: 'POST' }),
+    );
   });
 });

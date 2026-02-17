@@ -12,6 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export interface WebhooksProps {
   table: dynamodb.Table;
   ssmParamArns: string[];
+  telegramTestMode?: boolean;
 }
 
 export class Webhooks extends Construct {
@@ -24,6 +25,7 @@ export class Webhooks extends Construct {
 
     const commonEnv = {
       TABLE_NAME: props.table.tableName,
+      ...(props.telegramTestMode ? { TELEGRAM_TEST_MODE: 'true' } : {}),
     };
 
     const bundling = {
