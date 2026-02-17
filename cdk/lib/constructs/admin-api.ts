@@ -93,6 +93,7 @@ export class AdminApi extends Construct {
     // User pool client
     this.userPoolClient = this.userPool.addClient('WebClient', {
       authFlows: {
+        userSrp: true,
         userPassword: true,
         adminUserPassword: props.envName !== 'prod',
       },
