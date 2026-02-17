@@ -1,9 +1,8 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthProvider';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { CallbackPage } from './auth/CallbackPage';
 import { DashboardPage } from './pages/DashboardPage';
-import { OnboardingPage } from './pages/OnboardingPage';
 import { RoomListPage } from './pages/RoomListPage';
 import { RoomDetailPage } from './pages/RoomDetailPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -18,7 +17,7 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path="/" element={<DashboardPage />} />
-              <Route path="/onboarding" element={<OnboardingPage />} />
+              <Route path="/onboarding" element={<Navigate to="/" replace />} />
               <Route path="/rooms" element={<RoomListPage />} />
               <Route path="/rooms/:roomId" element={<RoomDetailPage />} />
               <Route path="/settings" element={<SettingsPage />} />

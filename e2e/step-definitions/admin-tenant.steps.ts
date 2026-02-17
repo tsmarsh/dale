@@ -10,8 +10,6 @@ When<DaleWorld>('I onboard a new tenant with display name {string}', async funct
     body: {
       displayName,
       telegramBotToken: '000000000:fake-bot-token-for-e2e',
-      stripeSecretKey: 'sk_test_fake_for_e2e',
-      stripeWebhookSecret: 'whsec_fake_for_e2e',
     },
   });
 
@@ -27,8 +25,6 @@ Given<DaleWorld>('I have onboarded a tenant with display name {string}', async f
     body: {
       displayName,
       telegramBotToken: '000000000:fake-bot-token-for-e2e',
-      stripeSecretKey: 'sk_test_fake_for_e2e',
-      stripeWebhookSecret: 'whsec_fake_for_e2e',
     },
   });
 

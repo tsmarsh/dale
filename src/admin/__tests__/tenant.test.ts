@@ -10,7 +10,7 @@ vi.mock('../../db/webhook-secrets.js', () => ({
   createWebhookSecretMapping: vi.fn(),
 }));
 
-import { handleGetTenant, handleUpdateTenant, handleOnboard } from '../routes/tenant.js';
+import { handleGetTenant, handleUpdateTenant, handleOnboard, handleConfigurePayment } from '../routes/tenant.js';
 import { getTenantById } from '../../db/tenants.js';
 
 const mockedGetTenant = vi.mocked(getTenantById);
@@ -186,12 +186,122 @@ describe('handleOnboard', () => {
     expect(result.statusCode).toBe(400);
   });
 
-  it('returns 400 when no payment provider given', async () => {
+  it('creates tenant without payment providers', async () => {
+    const deps = makeDeps();
     const result = await handleOnboard(TABLE, 'sub-123', JSON.stringify({
-      displayName: 'Test',
+      displayName: 'No Payment Creator',
       telegramBotToken: '123:ABC',
-    }), makeDeps());
+    }), deps);
+
+    expect(result.statusCode).toBe(201);
+    const body = JSON.parse(result.body);
+    expect(body.tenantId).toBe('new-tenant-id');
+    expect(body.webhookRegistered).toBe(true);
+    expect(body.stripeWebhookUrl).toBeUndefined();
+    expect(body.paypalWebhookUrl).toBeUndefined();
+
+    expect(deps.storeSecrets).toHaveBeenCalledWith('new-tenant-id', {
+      'telegram-bot-token': '123:ABC',
+      'telegram-webhook-secret': 'webhook-secret',
+    });
+    expect(deps.registerPayPalWebhook).not.toHaveBeenCalled();
+  });
+});
+
+function makePaymentDeps(overrides: Record<string, unknown> = {}) {
+  return {
+    storeSecrets: vi.fn(),
+    registerPayPalWebhook: vi.fn().mockResolvedValue('WH-auto-456'),
+    stripeWebhookUrl: 'https://stripe.example.com',
+    paypalWebhookUrl: 'https://paypal.example.com',
+    paypalBaseUrl: 'https://api-m.sandbox.paypal.com',
+    ...overrides,
+  };
+}
+
+describe('handleConfigurePayment', () => {
+  it('configures Stripe credentials', async () => {
+    const deps = makePaymentDeps();
+    const result = await handleConfigurePayment(AUTH, JSON.stringify({
+      stripeSecretKey: 'sk_test',
+      stripeWebhookSecret: 'whsec_test',
+    }), deps);
+
+    expect(result.statusCode).toBe(200);
+    const body = JSON.parse(result.body);
+    expect(body.configured).toBe(true);
+    expect(body.stripeWebhookUrl).toBe('https://stripe.example.com?tenant=tenant-1');
+    expect(body.paypalWebhookUrl).toBeUndefined();
+
+    expect(deps.storeSecrets).toHaveBeenCalledWith('tenant-1', {
+      'stripe-secret-key': 'sk_test',
+      'stripe-webhook-secret': 'whsec_test',
+    });
+    expect(deps.registerPayPalWebhook).not.toHaveBeenCalled();
+  });
+
+  it('configures PayPal credentials and auto-registers webhook', async () => {
+    const deps = makePaymentDeps();
+    const result = await handleConfigurePayment(AUTH, JSON.stringify({
+      paypalClientId: 'pp-client',
+      paypalClientSecret: 'pp-secret',
+    }), deps);
+
+    expect(result.statusCode).toBe(200);
+    const body = JSON.parse(result.body);
+    expect(body.configured).toBe(true);
+    expect(body.paypalWebhookUrl).toBe('https://paypal.example.com?tenant=tenant-1');
+
+    expect(deps.registerPayPalWebhook).toHaveBeenCalledWith(
+      'https://api-m.sandbox.paypal.com',
+      'pp-client',
+      'pp-secret',
+      'https://paypal.example.com?tenant=tenant-1',
+      expect.any(Array),
+    );
+
+    expect(deps.storeSecrets).toHaveBeenCalledWith('tenant-1', {
+      'paypal-client-id': 'pp-client',
+      'paypal-client-secret': 'pp-secret',
+      'paypal-webhook-id': 'WH-auto-456',
+    });
+  });
+
+  it('returns 400 when no provider specified', async () => {
+    const result = await handleConfigurePayment(AUTH, JSON.stringify({}), makePaymentDeps());
     expect(result.statusCode).toBe(400);
-    expect(JSON.parse(result.body).error).toContain('payment provider');
+    expect(JSON.parse(result.body).error).toContain('At least one payment provider');
+  });
+
+  it('returns 400 when Stripe key provided without secret', async () => {
+    const result = await handleConfigurePayment(AUTH, JSON.stringify({
+      stripeSecretKey: 'sk_test',
+    }), makePaymentDeps());
+    expect(result.statusCode).toBe(400);
+    expect(JSON.parse(result.body).error).toContain('stripeSecretKey and stripeWebhookSecret');
+  });
+
+  it('returns 400 when PayPal client ID provided without secret', async () => {
+    const result = await handleConfigurePayment(AUTH, JSON.stringify({
+      paypalClientId: 'pp-client',
+    }), makePaymentDeps());
+    expect(result.statusCode).toBe(400);
+    expect(JSON.parse(result.body).error).toContain('paypalClientId and paypalClientSecret');
+  });
+
+  it('returns 502 when PayPal registration fails', async () => {
+    const deps = makePaymentDeps({
+      registerPayPalWebhook: vi.fn().mockRejectedValue(new Error('PayPal error')),
+    });
+    const result = await handleConfigurePayment(AUTH, JSON.stringify({
+      paypalClientId: 'pp-client',
+      paypalClientSecret: 'pp-secret',
+    }), deps);
+    expect(result.statusCode).toBe(502);
+  });
+
+  it('returns 400 for invalid JSON', async () => {
+    const result = await handleConfigurePayment(AUTH, 'bad', makePaymentDeps());
+    expect(result.statusCode).toBe(400);
   });
 });

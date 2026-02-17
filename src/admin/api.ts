@@ -2,7 +2,7 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda
 import { SSMClient, PutParameterCommand } from '@aws-sdk/client-ssm';
 import { getPlatformConfig } from '../shared/config.js';
 import { extractAuthContext, extractCognitoSub } from './middleware/auth.js';
-import { handleGetTenant, handleUpdateTenant, handleOnboard } from './routes/tenant.js';
+import { handleGetTenant, handleUpdateTenant, handleOnboard, handleConfigurePayment } from './routes/tenant.js';
 import { handleListRooms, handleGetRoom, handleCreateRoom, handleUpdateRoom } from './routes/rooms.js';
 import { handleListSubscribers } from './routes/subscribers.js';
 import { handleRegisterWebhook } from './routes/webhooks.js';
@@ -87,6 +87,17 @@ export async function handler(
   }
   if (path === '/api/tenant' && method === 'PUT') {
     return json(await handleUpdateTenant(config.tableName, auth, event.body ?? ''));
+  }
+  if (path === '/api/tenant/payment' && method === 'PUT') {
+    return json(
+      await handleConfigurePayment(auth, event.body ?? '', {
+        storeSecrets,
+        registerPayPalWebhook,
+        stripeWebhookUrl: config.stripeWebhookUrl,
+        paypalWebhookUrl: config.paypalWebhookUrl,
+        paypalBaseUrl: config.paypalBaseUrl,
+      }),
+    );
   }
 
   // Room routes

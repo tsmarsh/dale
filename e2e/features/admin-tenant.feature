@@ -6,7 +6,7 @@ Feature: Admin Tenant Management
     When I onboard a new tenant with display name "E2E Test Tenant"
     Then the response status should be 201
     And the response body should have field "tenantId"
-    And the response body should have field "stripeWebhookUrl"
+    And the response body should have field "webhookRegistered"
 
   @auth
   Scenario: Get tenant after onboarding
@@ -29,6 +29,6 @@ Feature: Admin Tenant Management
   Scenario: Onboard without authentication returns 401
     When I send a POST request to "/api/tenant/onboard" without auth with body:
       """
-      {"displayName": "Unauth Tenant", "telegramBotToken": "fake", "stripeSecretKey": "fake", "stripeWebhookSecret": "fake"}
+      {"displayName": "Unauth Tenant", "telegramBotToken": "fake"}
       """
     Then the response status should be 401

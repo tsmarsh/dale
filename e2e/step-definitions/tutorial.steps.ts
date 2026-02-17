@@ -21,11 +21,6 @@ Given<DaleWorld>('I am authenticated in the browser', { timeout: 30000 }, async 
   );
 });
 
-When<DaleWorld>('I navigate to the onboarding page', { timeout: 15000 }, async function () {
-  assert.ok(this.page);
-  await this.page.goto(`${this.config.webDistributionUrl}/onboarding`, { waitUntil: 'networkidle' });
-});
-
 When<DaleWorld>('I navigate to the dashboard page', { timeout: 15000 }, async function () {
   assert.ok(this.page);
   await this.page.goto(`${this.config.webDistributionUrl}/`, { waitUntil: 'networkidle' });

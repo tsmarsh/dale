@@ -26,11 +26,19 @@ export interface SubscriberResponse {
 export interface OnboardRequest {
   displayName: string;
   telegramBotToken: string;
+}
+
+export interface ConfigurePaymentRequest {
   stripeSecretKey?: string;
   stripeWebhookSecret?: string;
   paypalClientId?: string;
   paypalClientSecret?: string;
-  paypalWebhookId?: string;
+}
+
+export interface ConfigurePaymentResponse {
+  configured: boolean;
+  stripeWebhookUrl?: string;
+  paypalWebhookUrl?: string;
 }
 
 export interface OnboardResponse {

@@ -81,10 +81,6 @@ export async function handleOnboard(
   const hasStripe = !!(parsed.stripeSecretKey && parsed.stripeWebhookSecret);
   const hasPayPal = !!(parsed.paypalClientId && parsed.paypalClientSecret);
 
-  if (!hasStripe && !hasPayPal) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'At least one payment provider (Stripe or PayPal) is required' }) };
-  }
-
   const tenantId = deps.generateId();
   const webhookSecret = deps.generateSecret();
 
@@ -151,6 +147,81 @@ export async function handleOnboard(
 
   return {
     statusCode: 201,
+    body: JSON.stringify(response),
+  };
+}
+
+export async function handleConfigurePayment(
+  auth: AuthContext,
+  body: string,
+  deps: {
+    storeSecrets: (tenantId: string, secrets: Record<string, string>) => Promise<void>;
+    registerPayPalWebhook: (baseUrl: string, clientId: string, clientSecret: string, webhookUrl: string, eventTypes: string[]) => Promise<string>;
+    stripeWebhookUrl: string;
+    paypalWebhookUrl: string;
+    paypalBaseUrl: string;
+  },
+): Promise<{ statusCode: number; body: string }> {
+  let parsed: {
+    stripeSecretKey?: string;
+    stripeWebhookSecret?: string;
+    paypalClientId?: string;
+    paypalClientSecret?: string;
+  };
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) };
+  }
+
+  const hasStripe = !!(parsed.stripeSecretKey || parsed.stripeWebhookSecret);
+  const hasPayPal = !!(parsed.paypalClientId || parsed.paypalClientSecret);
+
+  if (!hasStripe && !hasPayPal) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'At least one payment provider must be specified' }) };
+  }
+
+  if (hasStripe && (!parsed.stripeSecretKey || !parsed.stripeWebhookSecret)) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Both stripeSecretKey and stripeWebhookSecret are required' }) };
+  }
+
+  if (hasPayPal && (!parsed.paypalClientId || !parsed.paypalClientSecret)) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Both paypalClientId and paypalClientSecret are required' }) };
+  }
+
+  const secrets: Record<string, string> = {};
+  const response: Record<string, unknown> = { configured: true };
+
+  if (hasStripe) {
+    secrets['stripe-secret-key'] = parsed.stripeSecretKey!;
+    secrets['stripe-webhook-secret'] = parsed.stripeWebhookSecret!;
+    response.stripeWebhookUrl = `${deps.stripeWebhookUrl}?tenant=${auth.tenantId}`;
+  }
+
+  if (hasPayPal) {
+    try {
+      const webhookUrl = `${deps.paypalWebhookUrl}?tenant=${auth.tenantId}`;
+      const paypalWebhookId = await deps.registerPayPalWebhook(
+        deps.paypalBaseUrl,
+        parsed.paypalClientId!,
+        parsed.paypalClientSecret!,
+        webhookUrl,
+        PAYPAL_WEBHOOK_EVENT_TYPES,
+      );
+      secrets['paypal-client-id'] = parsed.paypalClientId!;
+      secrets['paypal-client-secret'] = parsed.paypalClientSecret!;
+      secrets['paypal-webhook-id'] = paypalWebhookId;
+      response.paypalWebhookUrl = webhookUrl;
+    } catch (err) {
+      console.error('PayPal webhook registration failed:', err);
+      return { statusCode: 502, body: JSON.stringify({ error: 'PayPal webhook registration failed' }) };
+    }
+  }
+
+  await deps.storeSecrets(auth.tenantId, secrets);
+
+  return {
+    statusCode: 200,
     body: JSON.stringify(response),
   };
 }

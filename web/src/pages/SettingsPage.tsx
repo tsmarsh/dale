@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTenant } from '../hooks/useTenant';
 import { api } from '../api/client';
-import type { InviteResponse, AdminUser } from '../api/types';
+import type { InviteResponse, AdminUser, ConfigurePaymentResponse } from '../api/types';
 
 export function SettingsPage() {
   const { tenant, loading, reload } = useTenant();
@@ -15,6 +15,13 @@ export function SettingsPage() {
   const [inviteStatus, setInviteStatus] = useState<string | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+
+  const [stripeSecretKey, setStripeSecretKey] = useState('');
+  const [stripeWebhookSecret, setStripeWebhookSecret] = useState('');
+  const [paypalClientId, setPaypalClientId] = useState('');
+  const [paypalClientSecret, setPaypalClientSecret] = useState('');
+  const [savingPayment, setSavingPayment] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
 
   useEffect(() => {
     loadUsers();
@@ -73,6 +80,43 @@ export function SettingsPage() {
     }
   }
 
+  async function handleSavePayment() {
+    setSavingPayment(true);
+    setPaymentStatus(null);
+
+    const body: Record<string, string> = {};
+    if (stripeSecretKey && stripeWebhookSecret) {
+      body.stripeSecretKey = stripeSecretKey;
+      body.stripeWebhookSecret = stripeWebhookSecret;
+    }
+    if (paypalClientId && paypalClientSecret) {
+      body.paypalClientId = paypalClientId;
+      body.paypalClientSecret = paypalClientSecret;
+    }
+
+    if (Object.keys(body).length === 0) {
+      setPaymentStatus('Please fill in at least one payment provider.');
+      setSavingPayment(false);
+      return;
+    }
+
+    try {
+      const result = await api.put<ConfigurePaymentResponse>('/api/tenant/payment', body);
+      const parts: string[] = ['Payment providers configured.'];
+      if (result.stripeWebhookUrl) parts.push(`Stripe webhook URL: ${result.stripeWebhookUrl}`);
+      if (result.paypalWebhookUrl) parts.push(`PayPal webhook URL: ${result.paypalWebhookUrl}`);
+      setPaymentStatus(parts.join(' '));
+      setStripeSecretKey('');
+      setStripeWebhookSecret('');
+      setPaypalClientId('');
+      setPaypalClientSecret('');
+    } catch (err: any) {
+      setPaymentStatus(err.message ?? 'Failed to configure payment providers');
+    } finally {
+      setSavingPayment(false);
+    }
+  }
+
   return (
     <div>
       <h1>Settings</h1>
@@ -91,6 +135,56 @@ export function SettingsPage() {
         <button className="btn-primary" onClick={handleSave} disabled={saving}>
           {saving ? 'Saving...' : 'Save'}
         </button>
+      </section>
+
+      <section style={{ marginBottom: '2rem' }}>
+        <h2>Payment Providers</h2>
+        <p>Configure your payment provider credentials. Payment links are set per-room.</p>
+
+        <h3>Stripe</h3>
+        <div className="form-group">
+          <label>Secret key:</label>
+          <input
+            type="text"
+            placeholder="sk_live_..."
+            value={stripeSecretKey}
+            onChange={(e) => setStripeSecretKey(e.target.value)}
+          />
+        </div>
+        <div className="form-group">
+          <label>Webhook signing secret:</label>
+          <input
+            type="text"
+            placeholder="whsec_..."
+            value={stripeWebhookSecret}
+            onChange={(e) => setStripeWebhookSecret(e.target.value)}
+          />
+        </div>
+
+        <h3>PayPal</h3>
+        <div className="form-group">
+          <label>Client ID:</label>
+          <input
+            type="text"
+            placeholder="PayPal client ID"
+            value={paypalClientId}
+            onChange={(e) => setPaypalClientId(e.target.value)}
+          />
+        </div>
+        <div className="form-group">
+          <label>Client secret:</label>
+          <input
+            type="text"
+            placeholder="PayPal client secret"
+            value={paypalClientSecret}
+            onChange={(e) => setPaypalClientSecret(e.target.value)}
+          />
+        </div>
+
+        <button className="btn-primary" onClick={handleSavePayment} disabled={savingPayment}>
+          {savingPayment ? 'Saving...' : 'Save Payment Settings'}
+        </button>
+        {paymentStatus && <p style={{ marginTop: '0.5rem' }}>{paymentStatus}</p>}
       </section>
 
       <section style={{ marginBottom: '2rem' }}>
