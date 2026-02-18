@@ -16,6 +16,9 @@
     "stripe": "^17.0.0",
     "ulid": "^2.3.0"
   },
+  "overrides": {
+    "fast-xml-parser": "5.3.6"
+  },
   "devDependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.991.0",
     "@types/aws-lambda": "^8.10.145",
