@@ -23,7 +23,7 @@ export function RoomDetailPage() {
       setRoom(data);
       setForm({ name: data.name, description: data.description, paymentLink: data.paymentLink, paypalPaymentLink: data.paypalPaymentLink, isActive: data.isActive });
     } catch (err) {
-      console.error('Failed to load room:', err);
+      console.error('Failed to load group:', err);
     } finally {
       setLoading(false);
     }
@@ -36,7 +36,10 @@ export function RoomDetailPage() {
   }
 
   if (loading) return <p>Loading...</p>;
-  if (!room) return <p>Room not found.</p>;
+  if (!room) return <p>Group not found.</p>;
+
+  const hasGroup = !!room.telegramGroupId;
+  const hasPayment = !!(room.paymentLink || room.paypalPaymentLink);
 
   return (
     <div>
@@ -45,7 +48,7 @@ export function RoomDetailPage() {
       {editing ? (
         <div style={{ marginBottom: '1rem' }}>
           <div className="form-group">
-            <label>Name:</label>
+            <label>Group name:</label>
             <input type="text" value={form.name ?? ''} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
           <div className="form-group">
@@ -74,9 +77,20 @@ export function RoomDetailPage() {
         <div style={{ marginBottom: '1rem' }}>
           <p>Status: <span className={`badge ${room.isActive ? 'badge-active' : 'badge-inactive'}`}>{room.isActive ? 'Active' : 'Inactive'}</span></p>
           {room.description && <p>Description: {room.description}</p>}
-          {room.telegramGroupId && <p>Telegram Group: {room.telegramGroupId}</p>}
-          {room.paymentLink && <p>Stripe Payment Link: <code>{room.paymentLink}</code></p>}
-          {room.paypalPaymentLink && <p>PayPal Subscription Link: <code>{room.paypalPaymentLink}</code></p>}
+          <p>
+            Telegram group: {hasGroup
+              ? <span style={{ color: 'var(--active)' }}>{'\u2713'} Linked</span>
+              : <span style={{ color: 'var(--pending)' }}>{'\u2717'} Not linked &mdash; add your bot to a Telegram group</span>
+            }
+          </p>
+          <p>
+            Payment: {hasPayment
+              ? <span style={{ color: 'var(--active)' }}>{'\u2713'} Configured</span>
+              : <span style={{ color: 'var(--pending)' }}>{'\u2717'} No payment link &mdash; add one to accept subscriptions</span>
+            }
+          </p>
+          {room.paymentLink && <p>Stripe: <code>{room.paymentLink}</code></p>}
+          {room.paypalPaymentLink && <p>PayPal: <code>{room.paypalPaymentLink}</code></p>}
           <button className="btn-primary" onClick={() => setEditing(true)} style={{ marginTop: '0.5rem' }}>Edit</button>
         </div>
       )}

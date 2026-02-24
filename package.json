@@ -27,6 +27,8 @@
     "aws-sdk-client-mock": "^4.1.0",
     "constructs": "^10.4.2",
     "esbuild": "^0.25.0",
+    "pixelmatch": "^7.1.0",
+    "quickpickle": "^1.11.1",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^4.0.0"

@@ -99,7 +99,7 @@ describe('Telegram webhook handler', () => {
     expect(mockedSendMessage).toHaveBeenCalledWith(
       '123:ABC',
       123,
-      expect.stringContaining('no rooms available'),
+      expect.stringContaining('no groups available'),
     );
   });
 
@@ -151,9 +151,13 @@ describe('Telegram webhook handler', () => {
     );
   });
 
-  it('ignores non-command text in DM', async () => {
+  it('responds to non-command text in DM', async () => {
     const result = await handler(makeEvent('hello'));
     expect(result.statusCode).toBe(200);
-    expect(mockedSendMessage).not.toHaveBeenCalled();
+    expect(mockedSendMessage).toHaveBeenCalledWith(
+      '123:ABC',
+      123,
+      expect.stringContaining('I work with commands'),
+    );
   });
 });

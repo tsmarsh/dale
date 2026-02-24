@@ -7,8 +7,23 @@ interface SetupRoomWizardProps {
   onComplete: () => void;
 }
 
+function CollapsibleHelp({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="collapsible-help">
+      <button type="button" className="collapsible-toggle" onClick={() => setOpen(!open)}>
+        {open ? '\u25BC' : '\u25B6'} {title}
+      </button>
+      {open && <div className="collapsible-content">{children}</div>}
+    </div>
+  );
+}
+
 export function SetupRoomWizard({ hasTenant, onComplete }: SetupRoomWizardProps) {
-  const [step, setStep] = useState(hasTenant ? 2 : 0);
+  const totalSteps = hasTenant ? 2 : 4;
+  const firstStep = hasTenant ? 2 : 0;
+
+  const [step, setStep] = useState(firstStep);
   const [displayName, setDisplayName] = useState('');
   const [botToken, setBotToken] = useState('');
   const [roomName, setRoomName] = useState('');
@@ -17,6 +32,15 @@ export function SetupRoomWizard({ hasTenant, onComplete }: SetupRoomWizardProps)
   const [priceDescription, setPriceDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+  const [createdRoomName, setCreatedRoomName] = useState('');
+
+  function currentStepNumber(): number {
+    if (hasTenant) return step - 1; // steps 2,3 become 1,2
+    return step + 1;
+  }
+
+  const hasPaymentLink = !!(paymentLink || paypalPaymentLink);
 
   async function handleSubmit() {
     setSubmitting(true);
@@ -35,7 +59,8 @@ export function SetupRoomWizard({ hasTenant, onComplete }: SetupRoomWizardProps)
       if (priceDescription) roomReq.priceDescription = priceDescription;
 
       await api.post('/api/rooms', roomReq);
-      onComplete();
+      setCreatedRoomName(roomName);
+      setDone(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Setup failed');
     } finally {
@@ -43,10 +68,35 @@ export function SetupRoomWizard({ hasTenant, onComplete }: SetupRoomWizardProps)
     }
   }
 
+  if (done) {
+    return (
+      <div className="wizard-success">
+        <div className="success-icon">{'\u{1F389}'}</div>
+        <h3>Your paid group is ready!</h3>
+        <p>"{createdRoomName}" has been created. Now add your bot to a Telegram group to start accepting subscribers.</p>
+        <CollapsibleHelp title="How to add your bot to a Telegram group">
+          <ol>
+            <li>Open your Telegram group</li>
+            <li>Go to group Settings {'\u2192'} Add Members</li>
+            <li>Search for your bot's username</li>
+            <li>Add the bot and make it an admin</li>
+            <li>The bot will automatically link to your group</li>
+          </ol>
+        </CollapsibleHelp>
+        <button className="btn-primary" onClick={onComplete} style={{ marginTop: '1rem' }}>
+          Go to Dashboard
+        </button>
+      </div>
+    );
+  }
+
+  const progressPercent = ((currentStepNumber() - 1) / totalSteps) * 100;
+
   const steps = [
     // Step 0: Display name
     <div key="name">
-      <h3>Step 1: Your display name</h3>
+      <h3>Step 1 of {totalSteps}: Your display name</h3>
+      <p className="help-text">This is the name your subscribers will see.</p>
       <div className="form-group">
         <input
           type="text"
@@ -61,12 +111,22 @@ export function SetupRoomWizard({ hasTenant, onComplete }: SetupRoomWizardProps)
     </div>,
     // Step 1: Bot token
     <div key="telegram">
-      <h3>Step 2: Telegram Bot Token</h3>
-      <p>Get this from <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a> on Telegram.</p>
+      <h3>Step 2 of {totalSteps}: Telegram Bot Token</h3>
+      <p className="help-text">You need a Telegram bot to manage your paid group. It takes about a minute to create one.</p>
+      <CollapsibleHelp title="How to create a Telegram bot">
+        <ol>
+          <li>Open Telegram and search for <strong>@BotFather</strong></li>
+          <li>Send <code>/newbot</code></li>
+          <li>Choose a name for your bot (e.g. "My Community Bot")</li>
+          <li>Choose a username ending in "bot" (e.g. "mycommunity_bot")</li>
+          <li>Copy the token BotFather gives you</li>
+          <li>Paste it below</li>
+        </ol>
+      </CollapsibleHelp>
       <div className="form-group">
         <input
           type="text"
-          placeholder="123456:ABC-DEF..."
+          placeholder="Paste your bot token here"
           value={botToken}
           onChange={(e) => setBotToken(e.target.value)}
         />
@@ -76,20 +136,31 @@ export function SetupRoomWizard({ hasTenant, onComplete }: SetupRoomWizardProps)
         <button className="btn-primary" onClick={() => setStep(2)} disabled={!botToken}>Next</button>
       </div>
     </div>,
-    // Step 2: Room details
+    // Step 2: Group details
     <div key="room">
-      <h3>{hasTenant ? 'Create a Room' : 'Step 3: Create your first room'}</h3>
+      <h3>{hasTenant ? `Step 1 of ${totalSteps}` : `Step 3 of ${totalSteps}`}: Set up your paid group</h3>
       <div className="form-group">
-        <label>Room name:</label>
+        <label>Paid group name:</label>
+        <p className="help-text">This is the name subscribers will see when they join.</p>
         <input
           type="text"
-          placeholder="My Premium Room"
+          placeholder="e.g. VIP Trading Signals"
           value={roomName}
           onChange={(e) => setRoomName(e.target.value)}
         />
       </div>
       <div className="form-group">
-        <label>Stripe payment link (optional):</label>
+        <label>Stripe payment link:</label>
+        <CollapsibleHelp title="How to create a Stripe payment link">
+          <ol>
+            <li>Go to <a href="https://dashboard.stripe.com/payment-links" target="_blank" rel="noopener">dashboard.stripe.com/payment-links</a></li>
+            <li>Click "New" to create a payment link</li>
+            <li>Choose "Subscription" as the type</li>
+            <li>Set your price (e.g. $9.99/month)</li>
+            <li>Copy the payment link URL</li>
+            <li>Paste it below</li>
+          </ol>
+        </CollapsibleHelp>
         <input
           type="text"
           placeholder="https://buy.stripe.com/..."
@@ -98,7 +169,7 @@ export function SetupRoomWizard({ hasTenant, onComplete }: SetupRoomWizardProps)
         />
       </div>
       <div className="form-group">
-        <label>PayPal payment link (optional):</label>
+        <label>PayPal payment link <span style={{ color: 'var(--text-dim)' }}>(or use PayPal instead)</span>:</label>
         <input
           type="text"
           placeholder="https://paypal.com/..."
@@ -107,7 +178,7 @@ export function SetupRoomWizard({ hasTenant, onComplete }: SetupRoomWizardProps)
         />
       </div>
       <div className="form-group">
-        <label>Price description (optional):</label>
+        <label>Price description <span style={{ color: 'var(--text-dim)' }}>(optional)</span>:</label>
         <input
           type="text"
           placeholder="$9.99/month"
@@ -115,15 +186,27 @@ export function SetupRoomWizard({ hasTenant, onComplete }: SetupRoomWizardProps)
           onChange={(e) => setPriceDescription(e.target.value)}
         />
       </div>
+      {!hasPaymentLink && (
+        <p className="help-text" style={{ color: 'var(--pending)' }}>
+          You need at least one payment link so subscribers can pay you.
+        </p>
+      )}
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         {!hasTenant && <button className="btn-secondary" onClick={() => setStep(1)}>Back</button>}
-        <button className="btn-primary" onClick={handleSubmit} disabled={!roomName || submitting}>
-          {submitting ? 'Creating...' : 'Create Room'}
+        <button className="btn-primary" onClick={handleSubmit} disabled={!roomName || !hasPaymentLink || submitting}>
+          {submitting ? 'Creating...' : 'Create Group'}
         </button>
       </div>
       {error && <p className="error-text">{error}</p>}
     </div>,
   ];
 
-  return <div>{steps[step]}</div>;
+  return (
+    <div>
+      <div className="wizard-progress">
+        <div className="wizard-progress-bar" style={{ width: `${progressPercent}%` }} />
+      </div>
+      {steps[step]}
+    </div>
+  );
 }

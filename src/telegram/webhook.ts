@@ -92,8 +92,9 @@ export async function handler(
       response = handleHelp();
     } else if (command.startsWith('/')) {
       response = handleUnknownCommand();
+    } else if (!inGroup) {
+      response = "I work with commands! Try /start to see available groups, or /help for a list of commands.";
     } else {
-      // Non-command messages in DM — ignore in multi-tenant
       return { statusCode: 200, body: 'ok' };
     }
 

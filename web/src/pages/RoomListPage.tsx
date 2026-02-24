@@ -23,7 +23,7 @@ export function RoomListPage() {
       setPaymentLink('');
       setPaypalPaymentLink('');
     } catch (err) {
-      console.error('Failed to create room:', err);
+      console.error('Failed to create group:', err);
     } finally {
       setCreating(false);
     }
@@ -31,15 +31,15 @@ export function RoomListPage() {
 
   const hasLink = !!(paymentLink || paypalPaymentLink);
 
-  if (loading) return <p>Loading rooms...</p>;
+  if (loading) return <p>Loading groups...</p>;
   if (error) return <p className="error-text">{error}</p>;
 
   return (
     <div>
       <div className="flex-between">
-        <h1>Rooms</h1>
+        <h1>Groups</h1>
         <button className="btn-secondary" onClick={() => setShowForm(!showForm)}>
-          {showForm ? 'Cancel' : 'Create Room'}
+          {showForm ? 'Cancel' : 'Create Group'}
         </button>
       </div>
 
@@ -48,7 +48,7 @@ export function RoomListPage() {
           <div className="form-group">
             <input
               type="text"
-              placeholder="Room name"
+              placeholder="Group name"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -56,7 +56,7 @@ export function RoomListPage() {
           <div className="form-group">
             <input
               type="text"
-              placeholder="Stripe payment link URL (optional)"
+              placeholder="Stripe payment link URL"
               value={paymentLink}
               onChange={(e) => setPaymentLink(e.target.value)}
             />
@@ -64,11 +64,16 @@ export function RoomListPage() {
           <div className="form-group">
             <input
               type="text"
-              placeholder="PayPal subscription link URL (optional)"
+              placeholder="PayPal subscription link URL (or use PayPal instead)"
               value={paypalPaymentLink}
               onChange={(e) => setPaypalPaymentLink(e.target.value)}
             />
           </div>
+          {!hasLink && (
+            <p className="help-text" style={{ color: 'var(--pending)' }}>
+              You need at least one payment link so subscribers can pay you.
+            </p>
+          )}
           <button className="btn-primary" onClick={handleCreate} disabled={!name || !hasLink || creating}>
             {creating ? 'Creating...' : 'Create'}
           </button>
@@ -76,7 +81,7 @@ export function RoomListPage() {
       )}
 
       {rooms.length === 0 ? (
-        <p style={{ marginTop: '1rem' }}>No rooms yet. Create one to get started.</p>
+        <p style={{ marginTop: '1rem' }}>No groups yet. Create one to get started.</p>
       ) : (
         <div style={{ marginTop: '1rem' }}>
           {rooms.map((room) => <RoomCard key={room.roomId} room={room} />)}

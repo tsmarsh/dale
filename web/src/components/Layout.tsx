@@ -15,7 +15,7 @@ export function Layout() {
       <header className="nav-header">
         <nav>
           <Link to="/">Dashboard</Link>
-          <Link to="/rooms">Rooms</Link>
+          <Link to="/rooms">Groups</Link>
           <Link to="/settings">Settings</Link>
         </nav>
         <button className="btn-secondary" onClick={signOut}>Sign out</button>

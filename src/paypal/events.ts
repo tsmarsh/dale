@@ -1,5 +1,6 @@
 import { getTenantByPayPalPayer, createPayPalUserRoomMapping } from '../db/paypal-mappings.js';
 import { sendMessage } from '../telegram/api.js';
+import { getRoom } from '../db/rooms.js';
 
 export function parseCustomId(ref: string | null | undefined): {
   tenantId: string;
@@ -51,10 +52,13 @@ export async function handleSubscriptionActivated(
     paypalSubscriptionId,
   );
 
+  const room = await getRoom(tableName, tenantId, parsed.roomId);
+  const groupName = room?.name ?? 'your group';
+
   await sendMessage(
     botToken,
     parsed.telegramUserId,
-    'Your subscription is now active! Use /help to see what you can do.',
+    `You're in! \u{1F389} Your subscription to *${groupName}* is now active.`,
   );
 }
 
@@ -75,7 +79,7 @@ export async function handleSubscriptionCancelled(
   await sendMessage(
     botToken,
     mapping.telegramUserId,
-    'Your subscription has been cancelled. Use /start to resubscribe.',
+    'Your subscription has been cancelled. Use /start to resubscribe anytime.',
   );
 }
 

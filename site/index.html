@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dale - Monetize Telegram Communities with Stripe Subscriptions</title>
-  <meta name="description" content="Multi-tenant serverless platform that lets creators monetize Telegram communities with Stripe subscriptions. Built with AWS Lambda, DynamoDB, and CDK.">
+  <title>Dale - Turn Your Telegram Group into a Paid Community</title>
+  <meta name="description" content="Dale lets creators turn Telegram groups into paid communities. Get paid automatically with Stripe or PayPal. No coding required.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -102,11 +102,17 @@
       font-weight: 900;
       margin-bottom: 1rem;
     }
-    .hero p {
-      font-size: 1.15rem;
+    .hero .subtitle {
+      font-size: 1.3rem;
       color: var(--text-muted);
       max-width: 600px;
-      margin: 0 auto 2rem;
+      margin: 0 auto 2.5rem;
+    }
+    .hero .cta-group {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
     }
 
     /* Glitch effect */
@@ -124,7 +130,7 @@
       text-shadow: 0 0 7px rgba(0, 255, 240, 0.6), 0 0 20px rgba(0, 255, 240, 0.3);
     }
 
-    /* ── Button ── */
+    /* ── Buttons ── */
     .btn-filled {
       display: inline-block;
       background: var(--cyan);
@@ -144,6 +150,24 @@
       background: #fff;
       color: var(--bg-deep);
       box-shadow: 0 0 20px rgba(0, 255, 240, 0.5);
+      text-shadow: none;
+    }
+    .btn-outline {
+      display: inline-block;
+      font-family: var(--font-heading);
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.75rem 2rem;
+      border: 1px solid var(--border-bright);
+      border-radius: 4px;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+    .btn-outline:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
       text-shadow: none;
     }
 
@@ -210,49 +234,6 @@
     .step h3 { margin-bottom: 0.5rem; }
     .step p { color: var(--text-muted); font-size: 0.9rem; }
 
-    /* ── Architecture ── */
-    .arch-diagram {
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 2rem;
-      overflow-x: auto;
-    }
-    .arch-diagram pre {
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
-      line-height: 1.8;
-      color: var(--text);
-      text-align: center;
-      white-space: pre;
-    }
-    .arch-diagram .label-telegram { color: #29b6f6; }
-    .arch-diagram .label-stripe { color: #635bff; }
-    .arch-diagram .label-aws { color: var(--yellow); }
-    .arch-diagram .label-muted { color: var(--text-dim); }
-
-    /* ── Tech Stack ── */
-    .tech-grid {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 1rem;
-    }
-    .tech-badge {
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 0.5rem 1rem;
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      transition: border-color 0.2s, color 0.2s;
-    }
-    .tech-badge:hover {
-      border-color: var(--cyan);
-      color: var(--cyan);
-    }
-
     /* ── Footer ── */
     footer {
       text-align: center;
@@ -285,35 +266,38 @@
   <header class="hero">
     <div class="container">
       <h1 class="glitch-auto neon-text">Dale</h1>
-      <p>Monetize Telegram communities with Stripe subscriptions. Multi-tenant, serverless, deploy-and-go.</p>
-      <a href="https://github.com/tsmarsh/dale" class="btn-filled">View on GitHub</a>
+      <p class="subtitle">Turn your Telegram group into a paid community. Accept subscriptions, manage access, and grow your audience — no coding required.</p>
+      <div class="cta-group">
+        <a href="https://dale.tailoredshapes.com" class="btn-filled">Start Free</a>
+        <a href="https://github.com/tsmarsh/dale" class="btn-outline">View on GitHub</a>
+      </div>
     </div>
   </header>
 
   <!-- Features -->
   <section>
     <div class="container">
-      <h2>Features</h2>
+      <h2>Why Creators Choose Dale</h2>
       <div class="features-grid">
         <div class="feature-card">
-          <div class="icon">&#x1F916;</div>
-          <h3>Telegram Bot</h3>
-          <p>Automatic bot integration handles /start, /status, /help, and /cancel. Subscribers get access, everyone else gets a payment link.</p>
+          <div class="icon">&#x1F4B3;</div>
+          <h3>Get Paid Automatically</h3>
+          <p>Connect Stripe or PayPal and start accepting recurring subscriptions. Payments flow directly to your account.</p>
         </div>
         <div class="feature-card">
-          <div class="icon">&#x1F4B3;</div>
-          <h3>Stripe Billing</h3>
-          <p>Recurring subscriptions via Stripe Checkout. Webhook-driven status sync keeps everything in lockstep.</p>
+          <div class="icon">&#x1F512;</div>
+          <h3>Automatic Access Control</h3>
+          <p>Subscribers get in, everyone else gets a payment link. Your bot handles it all so you can focus on your community.</p>
         </div>
         <div class="feature-card">
           <div class="icon">&#x1F4CA;</div>
-          <h3>Creator Dashboard</h3>
-          <p>React SPA with Cognito auth. Manage rooms, view subscribers, and configure your tenant from the browser.</p>
+          <h3>See Your Subscribers</h3>
+          <p>A simple dashboard shows who's subscribed, payment status, and which groups are active — all at a glance.</p>
         </div>
         <div class="feature-card">
-          <div class="icon">&#x1F3E2;</div>
-          <h3>Multi-Tenant</h3>
-          <p>One deployment serves many creators. Tenant isolation via DynamoDB key prefixes and per-tenant SSM secrets.</p>
+          <div class="icon">&#x1F30D;</div>
+          <h3>Works for Everyone</h3>
+          <p>Coaches, educators, hobbyists, analysts — anyone with a Telegram audience can start earning in minutes.</p>
         </div>
       </div>
     </div>
@@ -322,60 +306,23 @@
   <!-- How it Works -->
   <section>
     <div class="container">
-      <h2>How it Works</h2>
+      <h2>How It Works</h2>
       <div class="steps">
         <div class="step">
           <div class="step-number">1</div>
-          <h3>Connect Services</h3>
-          <p>Link your Telegram bot and Stripe account. Store secrets in SSM, deploy with CDK.</p>
+          <h3>Create a Bot</h3>
+          <p>Open Telegram, talk to @BotFather, and create a bot in under a minute. Our wizard walks you through it.</p>
         </div>
         <div class="step">
           <div class="step-number">2</div>
-          <h3>Create Rooms</h3>
-          <p>Set up subscription rooms in the dashboard. Each room gets its own payment link and access controls.</p>
+          <h3>Set Up Your Group</h3>
+          <p>Name your paid group, add a Stripe or PayPal payment link, and add your bot to your Telegram group.</p>
         </div>
         <div class="step">
           <div class="step-number">3</div>
-          <h3>Subscribers Pay &amp; Get Access</h3>
-          <p>Users hit /start, pay via Stripe, and instantly get access. Billing events keep status in sync automatically.</p>
+          <h3>Share &amp; Earn</h3>
+          <p>Share your group with your audience. They subscribe, pay, and get access — all automatically.</p>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Architecture -->
-  <section>
-    <div class="container">
-      <h2>Architecture</h2>
-      <div class="arch-diagram">
-        <pre>
-<span class="label-telegram">Telegram</span> <span class="label-muted">──webhook──▶</span> <span class="label-aws">Telegram Lambda</span> <span class="label-muted">──▶</span> <span class="label-aws">DynamoDB</span> <span class="label-muted">◀──</span> <span class="label-aws">Stripe Lambda</span> <span class="label-muted">◀──webhook──</span> <span class="label-stripe">Stripe</span>
-
-                                                <span class="label-muted">▲</span>
-                                                <span class="label-muted">│</span>
-                                        <span class="label-aws">Admin Lambda</span>
-                                                <span class="label-muted">▲</span>
-                                                <span class="label-muted">│</span>
-                              <span class="label-aws">CloudFront</span> <span class="label-muted">──</span> <span class="label-aws">React SPA</span> <span class="label-muted">──</span> <span class="label-aws">Cognito</span>
-        </pre>
-      </div>
-    </div>
-  </section>
-
-  <!-- Tech Stack -->
-  <section>
-    <div class="container">
-      <h2>Tech Stack</h2>
-      <div class="tech-grid">
-        <span class="tech-badge">AWS Lambda</span>
-        <span class="tech-badge">DynamoDB</span>
-        <span class="tech-badge">AWS CDK</span>
-        <span class="tech-badge">CloudFront</span>
-        <span class="tech-badge">Cognito</span>
-        <span class="tech-badge">SSM Parameter Store</span>
-        <span class="tech-badge">TypeScript</span>
-        <span class="tech-badge">React</span>
-        <span class="tech-badge">Vitest</span>
       </div>
     </div>
   </section>
@@ -383,7 +330,7 @@
   <!-- Footer -->
   <footer>
     <div class="container">
-      <p><a href="tutorial.html">Tutorial</a> &middot; <a href="https://github.com/tsmarsh/dale">Dale on GitHub</a></p>
+      <p><a href="tutorial.html">Tutorial</a> &middot; <a href="https://github.com/tsmarsh/dale">View on GitHub</a></p>
     </div>
   </footer>
 

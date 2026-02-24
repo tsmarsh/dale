@@ -38,7 +38,7 @@ const makeUserRoom = (overrides: Partial<UserRoom> = {}): UserRoom => ({
 describe('handleStartDM', () => {
   it('shows no rooms message when no rooms exist', () => {
     const result = handleStartDM([], [], 't1', 123);
-    expect(result).toContain('no rooms available');
+    expect(result).toContain('no groups available');
   });
 
   it('shows subscribed rooms as active', () => {
@@ -46,7 +46,7 @@ describe('handleStartDM', () => {
     const userRooms = [makeUserRoom()];
     const result = handleStartDM(rooms, userRooms, 't1', 123);
     expect(result).toContain('VIP Room');
-    expect(result).toContain('subscribed');
+    expect(result).toContain("You're in!");
   });
 
   it('shows unsubscribed rooms with Stripe payment link', () => {
@@ -54,21 +54,21 @@ describe('handleStartDM', () => {
     const result = handleStartDM(rooms, [], 't1', 456);
     expect(result).toContain('VIP Room');
     expect(result).toContain('client_reference_id=t1:456:r1');
-    expect(result).toContain('Stripe:');
+    expect(result).toContain('Pay with card');
   });
 
   it('shows unsubscribed rooms with PayPal link', () => {
     const rooms = [makeRoom({ paypalPaymentLink: 'https://paypal.com/subscribe?plan_id=P-123' })];
     const result = handleStartDM(rooms, [], 't1', 456);
-    expect(result).toContain('PayPal:');
+    expect(result).toContain('Pay with PayPal');
     expect(result).toContain('custom_id=t1:456:r1');
   });
 
   it('shows both links when both configured', () => {
     const rooms = [makeRoom({ paypalPaymentLink: 'https://paypal.com/subscribe?plan_id=P-123' })];
     const result = handleStartDM(rooms, [], 't1', 456);
-    expect(result).toContain('Stripe:');
-    expect(result).toContain('PayPal:');
+    expect(result).toContain('Pay with card');
+    expect(result).toContain('Pay with PayPal');
   });
 
   it('skips inactive rooms', () => {
@@ -89,13 +89,13 @@ describe('handleStartGroup', () => {
     const result = handleStartGroup(makeRoom(), null, 't1', 456);
     expect(result).toContain('Subscribe here');
     expect(result).toContain('client_reference_id=t1:456:r1');
-    expect(result).toContain('Stripe:');
+    expect(result).toContain('Pay with card');
   });
 
   it('shows both links for non-subscriber when both configured', () => {
     const result = handleStartGroup(makeRoom({ paypalPaymentLink: 'https://paypal.com/subscribe?plan_id=P-123' }), null, 't1', 456);
-    expect(result).toContain('Stripe:');
-    expect(result).toContain('PayPal:');
+    expect(result).toContain('Pay with card');
+    expect(result).toContain('Pay with PayPal');
     expect(result).toContain('custom_id=t1:456:r1');
   });
 });

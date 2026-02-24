@@ -7,7 +7,7 @@ export function handleStartDM(
   telegramUserId: number,
 ): string {
   if (rooms.length === 0) {
-    return 'This bot has no rooms available yet. Check back later!';
+    return 'This bot has no groups available yet. Check back later!';
   }
 
   const activeRoomIds = new Set(
@@ -16,22 +16,22 @@ export function handleStartDM(
       .map((ur) => ur.roomId),
   );
 
-  const lines = ['Welcome! Here are the available rooms:\n'];
+  const lines = ["Hey! \u{1F44B} Here's what you can join:\n"];
   for (const room of rooms) {
     if (!room.isActive) continue;
     if (activeRoomIds.has(room.roomId)) {
-      lines.push(`✅ *${room.name}* — subscribed`);
+      lines.push(`\u2705 *${room.name}* \u2014 You're in!`);
     } else {
       const ref = `${tenantId}:${telegramUserId}:${room.roomId}`;
       const desc = room.priceDescription ? ` (${room.priceDescription})` : '';
       const links: string[] = [];
       if (room.paymentLink) {
-        links.push(`Stripe: ${room.paymentLink}?client_reference_id=${ref}`);
+        links.push(`[Pay with card](${room.paymentLink}?client_reference_id=${ref})`);
       }
       if (room.paypalPaymentLink) {
-        links.push(`PayPal: ${room.paypalPaymentLink}&custom_id=${ref}`);
+        links.push(`[Pay with PayPal](${room.paypalPaymentLink}&custom_id=${ref})`);
       }
-      lines.push(`🔒 *${room.name}*${desc}\n${links.join('\n')}`);
+      lines.push(`\u{1F512} *${room.name}*${desc}\n${links.join(' \u00B7 ')}`);
     }
   }
   return lines.join('\n');
@@ -49,17 +49,17 @@ export function handleStartGroup(
   const ref = `${tenantId}:${telegramUserId}:${room.roomId}`;
   const links: string[] = [];
   if (room.paymentLink) {
-    links.push(`Stripe: ${room.paymentLink}?client_reference_id=${ref}`);
+    links.push(`[Pay with card](${room.paymentLink}?client_reference_id=${ref})`);
   }
   if (room.paypalPaymentLink) {
-    links.push(`PayPal: ${room.paypalPaymentLink}&custom_id=${ref}`);
+    links.push(`[Pay with PayPal](${room.paypalPaymentLink}&custom_id=${ref})`);
   }
-  return `Welcome to *${room.name}*! Subscribe here to get access:\n${links.join('\n')}`;
+  return `Welcome to *${room.name}*! Subscribe here to get access:\n${links.join(' \u00B7 ')}`;
 }
 
 export function handleStatus(userRooms: UserRoom[], rooms: Room[]): string {
   if (userRooms.length === 0) {
-    return 'You do not have any subscriptions yet. Use /start to see available rooms.';
+    return 'You do not have any subscriptions yet. Use /start to see available groups.';
   }
 
   const roomMap = new Map(rooms.map((r) => [r.roomId, r]));
@@ -68,10 +68,10 @@ export function handleStatus(userRooms: UserRoom[], rooms: Room[]): string {
     const room = roomMap.get(ur.roomId);
     const name = room?.name ?? ur.roomId;
     const statusLabel: Record<string, string> = {
-      active: '✅ active',
-      past_due: '⚠️ past due',
-      cancelled: '❌ cancelled',
-      none: '— none',
+      active: '\u2705 active',
+      past_due: '\u26A0\uFE0F past due',
+      cancelled: '\u274C cancelled',
+      none: '\u2014 none',
     };
     lines.push(`${name}: ${statusLabel[ur.subscriptionStatus] ?? ur.subscriptionStatus}`);
   }
@@ -81,7 +81,7 @@ export function handleStatus(userRooms: UserRoom[], rooms: Room[]): string {
 export function handleHelp(): string {
   return [
     '*Available commands:*',
-    '/start - See available rooms and subscribe',
+    '/start - See available groups and subscribe',
     '/status - Check your subscription status',
     '/help - Show this help message',
   ].join('\n');

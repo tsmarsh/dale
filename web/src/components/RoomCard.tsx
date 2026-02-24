@@ -6,6 +6,9 @@ interface RoomCardProps {
 }
 
 export function RoomCard({ room }: RoomCardProps) {
+  const hasPayment = !!(room.paymentLink || room.paypalPaymentLink);
+  const hasGroup = !!room.telegramGroupId;
+
   return (
     <div className="card">
       <div className="card-header">
@@ -17,7 +20,14 @@ export function RoomCard({ room }: RoomCardProps) {
         </span>
       </div>
       {room.description && <p className="card-description">{room.description}</p>}
-      {room.telegramGroupId && <p className="card-meta">Telegram Group: {room.telegramGroupId}</p>}
+      <div className="card-setup-status">
+        <span className={hasGroup ? 'status-ok' : 'status-missing'}>
+          {hasGroup ? '\u2713 Telegram group linked' : '\u2717 No Telegram group \u2014 add your bot to a group'}
+        </span>
+        <span className={hasPayment ? 'status-ok' : 'status-missing'}>
+          {hasPayment ? '\u2713 Payment link configured' : '\u2717 No payment link'}
+        </span>
+      </div>
     </div>
   );
 }

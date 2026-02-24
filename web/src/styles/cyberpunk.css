@@ -555,6 +555,116 @@ section {
   padding: 2rem 0;
 }
 
+/* ── Wizard Progress Bar ── */
+.wizard-progress {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+.wizard-progress-bar {
+  height: 100%;
+  background: var(--cyan);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 8px rgba(0, 255, 240, 0.4);
+}
+
+/* ── Collapsible Help ── */
+.collapsible-help {
+  margin: 0.5rem 0 1rem;
+}
+.collapsible-toggle {
+  background: none;
+  border: none;
+  color: var(--cyan);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.collapsible-toggle:hover {
+  color: #fff;
+  border-color: transparent;
+  box-shadow: none;
+}
+.collapsible-content {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+.collapsible-content ol {
+  padding-left: 1.25rem;
+}
+.collapsible-content li {
+  margin-bottom: 0.4rem;
+}
+
+/* ── Help Text ── */
+.help-text {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+/* ── Wizard Success ── */
+.wizard-success {
+  text-align: center;
+  padding: 2rem 0;
+}
+.wizard-success .success-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+.wizard-success h3 {
+  margin-bottom: 0.75rem;
+  color: var(--active);
+}
+.wizard-success p {
+  color: var(--text-muted);
+  max-width: 480px;
+  margin: 0 auto 1rem;
+}
+
+/* ── Getting Started Checklist ── */
+.checklist {
+  list-style: none;
+  padding: 0;
+}
+.checklist li {
+  padding: 0.3rem 0;
+  font-size: 0.95rem;
+}
+.checklist-done {
+  color: var(--text);
+}
+.checklist-todo {
+  color: var(--text-muted);
+}
+
+/* ── Card Setup Status ── */
+.card-setup-status {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+}
+.status-ok {
+  color: var(--active);
+}
+.status-missing {
+  color: var(--pending);
+}
+
 /* ── Responsive ── */
 @media (max-width: 640px) {
   .container { padding: 0 1rem; }

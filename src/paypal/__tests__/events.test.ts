@@ -9,6 +9,10 @@ vi.mock('../../telegram/api.js', () => ({
   sendMessage: vi.fn(),
 }));
 
+vi.mock('../../db/rooms.js', () => ({
+  getRoom: vi.fn(),
+}));
+
 import {
   parseCustomId,
   handleSubscriptionActivated,
