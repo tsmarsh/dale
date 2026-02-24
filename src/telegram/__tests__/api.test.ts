@@ -1,97 +1,122 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { sendMessage, setWebhook } from '../api.js';
+import { createChatInviteLink, banChatMember, unbanChatMember } from '../api.js';
 
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
+vi.stubGlobal('fetch', mockFetch);
 
 beforeEach(() => {
   vi.clearAllMocks();
-  delete process.env.TELEGRAM_TEST_MODE;
 });
 
-describe('sendMessage', () => {
-  it('calls Telegram API with correct params', async () => {
-    mockFetch.mockResolvedValue({ ok: true });
-
-    await sendMessage('123:ABC', 456, 'Hello!');
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.telegram.org/bot123:ABC/sendMessage',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: 456,
-          text: 'Hello!',
-          parse_mode: 'Markdown',
-        }),
-      },
-    );
-  });
-
-  it('logs error on failure', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    mockFetch.mockResolvedValue({ ok: false, status: 400, text: async () => 'Bad request' });
-
-    await sendMessage('123:ABC', 456, 'Hello!');
-
-    expect(consoleSpy).toHaveBeenCalled();
-    consoleSpy.mockRestore();
-  });
-});
-
-describe('setWebhook', () => {
-  it('calls setWebhook API and returns true on success', async () => {
+describe('createChatInviteLink', () => {
+  it('returns invite link on success', async () => {
     mockFetch.mockResolvedValue({
-      json: async () => ({ ok: true }),
+      ok: true,
+      json: async () => ({ ok: true, result: { invite_link: 'https://t.me/+abc123' } }),
     });
 
-    const result = await setWebhook('123:ABC', 'https://example.com/webhook', 'secret-123');
+    const link = await createChatInviteLink('bot-token', -1001234567890);
 
-    expect(result).toBe(true);
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.telegram.org/bot123:ABC/setWebhook',
+      expect.stringContaining('createChatInviteLink'),
       expect.objectContaining({
         method: 'POST',
-        body: expect.stringContaining('secret-123'),
+        body: JSON.stringify({ chat_id: -1001234567890, member_limit: 1 }),
       }),
     );
+    expect(link).toBe('https://t.me/+abc123');
   });
 
-  it('returns false on failure', async () => {
+  it('returns null on HTTP failure', async () => {
     mockFetch.mockResolvedValue({
+      ok: false,
+      status: 403,
+      text: async () => 'Forbidden',
+    });
+
+    const link = await createChatInviteLink('bot-token', -1001234567890);
+    expect(link).toBeNull();
+  });
+
+  it('returns null if result has no invite_link', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
       json: async () => ({ ok: false }),
     });
 
-    const result = await setWebhook('123:ABC', 'https://example.com/webhook', 'secret-123');
+    const link = await createChatInviteLink('bot-token', -1001234567890);
+    expect(link).toBeNull();
+  });
+});
+
+describe('banChatMember', () => {
+  it('returns true on success', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: true }),
+    });
+
+    const result = await banChatMember('bot-token', -1001234567890, 42);
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining('banChatMember'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ chat_id: -1001234567890, user_id: 42 }),
+      }),
+    );
+    expect(result).toBe(true);
+  });
+
+  it('returns false on HTTP failure', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: async () => 'Bad Request',
+    });
+
+    const result = await banChatMember('bot-token', -1001234567890, 42);
+    expect(result).toBe(false);
+  });
+
+  it('returns false if Telegram returns ok: false', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: false }),
+    });
+
+    const result = await banChatMember('bot-token', -1001234567890, 42);
     expect(result).toBe(false);
   });
 });
 
-describe('test DC mode', () => {
-  it('sendMessage uses /test/ prefix when TELEGRAM_TEST_MODE is true', async () => {
-    process.env.TELEGRAM_TEST_MODE = 'true';
-    mockFetch.mockResolvedValue({ ok: true });
-
-    await sendMessage('123:ABC', 456, 'Hello!');
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.telegram.org/bot123:ABC/test/sendMessage',
-      expect.objectContaining({ method: 'POST' }),
-    );
-  });
-
-  it('setWebhook uses /test/ prefix when TELEGRAM_TEST_MODE is true', async () => {
-    process.env.TELEGRAM_TEST_MODE = 'true';
+describe('unbanChatMember', () => {
+  it('returns true on success', async () => {
     mockFetch.mockResolvedValue({
+      ok: true,
       json: async () => ({ ok: true }),
     });
 
-    await setWebhook('123:ABC', 'https://example.com/webhook', 'secret-123');
+    const result = await unbanChatMember('bot-token', -1001234567890, 42);
 
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.telegram.org/bot123:ABC/test/setWebhook',
-      expect.objectContaining({ method: 'POST' }),
+      expect.stringContaining('unbanChatMember'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ chat_id: -1001234567890, user_id: 42, only_if_banned: true }),
+      }),
     );
+    expect(result).toBe(true);
+  });
+
+  it('returns false on HTTP failure', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: async () => 'Bad Request',
+    });
+
+    const result = await unbanChatMember('bot-token', -1001234567890, 42);
+    expect(result).toBe(false);
   });
 });

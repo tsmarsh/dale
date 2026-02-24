@@ -1,8 +1,9 @@
 import type Stripe from 'stripe';
 import type { SubscriptionStatus } from '../shared/types.js';
 import { getTenantByStripeCustomer, createUserRoomMapping } from '../db/stripe-mappings.js';
-import { updateUserRoomStatus } from '../db/users.js';
-import { sendMessage } from '../telegram/api.js';
+import { listUserRooms, updateUserRoomStatus } from '../db/users.js';
+import { getRoom } from '../db/rooms.js';
+import { sendMessage, createChatInviteLink, banChatMember, unbanChatMember } from '../telegram/api.js';
 
 function mapStripeStatus(stripeStatus: string): SubscriptionStatus {
   switch (stripeStatus) {
@@ -67,30 +68,54 @@ export async function handleCheckoutCompleted(
     stripeSubscriptionId,
   );
 
-  await sendMessage(
-    botToken,
-    parsed.telegramUserId,
-    'Your subscription is now active! Use /help to see what you can do.',
-  );
+  const room = await getRoom(tableName, tenantId, parsed.roomId);
+  const groupName = room?.name ?? 'your group';
+
+  let inviteLink: string | null = null;
+  if (room?.telegramGroupId) {
+    inviteLink = await createChatInviteLink(botToken, room.telegramGroupId);
+    if (!inviteLink) {
+      console.warn(`Failed to create invite link for room ${parsed.roomId}`);
+    }
+  }
+
+  const message = inviteLink
+    ? `You're in! 🎉 Your subscription to *${groupName}* is now active.\n\n👉 [Join the group](${inviteLink})`
+    : `You're in! 🎉 Your subscription to *${groupName}* is now active.`;
+
+  await sendMessage(botToken, parsed.telegramUserId, message);
 }
 
 export async function handleInvoicePaid(
   tableName: string,
   tenantId: string,
+  botToken: string,
   invoice: Stripe.Invoice,
 ): Promise<void> {
   const stripeCustomerId = invoice.customer as string;
   if (!stripeCustomerId) return;
 
   const mapping = await getTenantByStripeCustomer(tableName, stripeCustomerId);
-  if (!mapping) {
-    console.warn(`No mapping found for Stripe customer ${stripeCustomerId}`);
-    return;
-  }
+  if (!mapping || mapping.tenantId !== tenantId) return;
 
-  // Find user rooms and update them all to active
-  // For invoice.paid we just update the status — the room context comes from the mapping
-  // We don't have room-specific info in the invoice, so we update all rooms for this user+tenant
+  const subscriptionId = invoice.subscription as string | undefined;
+  const userRooms = await listUserRooms(tableName, tenantId, mapping.telegramUserId);
+
+  const relevant = subscriptionId
+    ? userRooms.filter((ur) => ur.stripeSubscriptionId === subscriptionId)
+    : userRooms;
+
+  for (const ur of relevant) {
+    const wasInactive = ur.subscriptionStatus === 'cancelled' || ur.subscriptionStatus === 'past_due';
+    await updateUserRoomStatus(tableName, tenantId, mapping.telegramUserId, ur.roomId, 'active');
+
+    if (wasInactive) {
+      const room = await getRoom(tableName, tenantId, ur.roomId);
+      if (room?.telegramGroupId) {
+        await unbanChatMember(botToken, room.telegramGroupId, mapping.telegramUserId);
+      }
+    }
+  }
 }
 
 export async function handleInvoicePaymentFailed(
@@ -124,16 +149,29 @@ export async function handleSubscriptionDeleted(
   const mapping = await getTenantByStripeCustomer(tableName, stripeCustomerId);
   if (!mapping || mapping.tenantId !== tenantId) return;
 
+  const userRooms = await listUserRooms(tableName, tenantId, mapping.telegramUserId);
+  const relevant = userRooms.filter((ur) => ur.stripeSubscriptionId === subscription.id);
+
+  for (const ur of relevant) {
+    await updateUserRoomStatus(tableName, tenantId, mapping.telegramUserId, ur.roomId, 'cancelled');
+
+    const room = await getRoom(tableName, tenantId, ur.roomId);
+    if (room?.telegramGroupId) {
+      await banChatMember(botToken, room.telegramGroupId, mapping.telegramUserId);
+    }
+  }
+
   await sendMessage(
     botToken,
     mapping.telegramUserId,
-    'Your subscription has been cancelled. Use /start to resubscribe.',
+    'Your subscription has been cancelled. Use /start to resubscribe anytime.',
   );
 }
 
 export async function handleSubscriptionUpdated(
   tableName: string,
   tenantId: string,
+  botToken: string,
   subscription: Stripe.Subscription,
 ): Promise<void> {
   const stripeCustomerId = subscription.customer as string;
@@ -143,6 +181,19 @@ export async function handleSubscriptionUpdated(
   if (!mapping || mapping.tenantId !== tenantId) return;
 
   const status = mapStripeStatus(subscription.status);
-  // Note: without room-specific info we can't update a specific UserRoom here.
-  // This is handled via the StripeMapping lookup.
+  const userRooms = await listUserRooms(tableName, tenantId, mapping.telegramUserId);
+  const relevant = userRooms.filter((ur) => ur.stripeSubscriptionId === subscription.id);
+
+  for (const ur of relevant) {
+    await updateUserRoomStatus(tableName, tenantId, mapping.telegramUserId, ur.roomId, status);
+
+    const room = await getRoom(tableName, tenantId, ur.roomId);
+    if (room?.telegramGroupId) {
+      if (status === 'cancelled') {
+        await banChatMember(botToken, room.telegramGroupId, mapping.telegramUserId);
+      } else if (status === 'active') {
+        await unbanChatMember(botToken, room.telegramGroupId, mapping.telegramUserId);
+      }
+    }
+  }
 }

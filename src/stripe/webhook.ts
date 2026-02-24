@@ -66,6 +66,7 @@ export async function handler(
         await handleInvoicePaid(
           config.tableName,
           tenantId,
+          tenantSecrets.telegramBotToken,
           stripeEvent.data.object as Stripe.Invoice,
         );
         break;
@@ -89,6 +90,7 @@ export async function handler(
         await handleSubscriptionUpdated(
           config.tableName,
           tenantId,
+          tenantSecrets.telegramBotToken,
           stripeEvent.data.object as Stripe.Subscription,
         );
         break;
