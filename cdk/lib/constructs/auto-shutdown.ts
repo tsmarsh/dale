@@ -83,8 +83,10 @@ export class AutoShutdown extends Construct {
       threshold: 1,
       comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
       evaluationPeriods,
-      // Treat missing data as breaching: no traffic reported = idle
-      treatMissingData: cloudwatch.TreatMissingData.BREACHING,
+      // NOT_BREACHING: missing data points (no API Gateway metrics at all) don't trigger shutdown.
+      // The alarm only fires when the API has *had* traffic that then drops to zero.
+      // This prevents immediate self-deletion on fresh deploys with no traffic yet.
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
 
     idleAlarm.addAlarmAction(new cloudwatchActions.SnsAction(alarmTopic));
