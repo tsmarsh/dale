@@ -4,6 +4,7 @@ import { Database } from './constructs/database.js';
 import { Webhooks } from './constructs/webhooks.js';
 import { AdminApi } from './constructs/admin-api.js';
 import { WebHosting } from './constructs/web-hosting.js';
+import { AutoShutdown } from './constructs/auto-shutdown.js';
 
 export interface DaleStackProps extends cdk.StackProps {
   envName: string;
@@ -64,6 +65,15 @@ export class DaleStack extends cdk.Stack {
       callbackUrls: process.env.CALLBACK_URLS?.split(',') ?? [`${siteUrl}/callback`, 'http://localhost:5173/callback'],
       logoutUrls: process.env.LOGOUT_URLS?.split(',') ?? [siteUrl, 'http://localhost:5173/'],
     });
+
+    // Auto-shutdown: destroy dev stack after 30min of inactivity (saves ~$33/month NAT costs)
+    // Not applied to prod (retainData=true acts as a proxy for "is prod")
+    if (!props.retainData) {
+      new AutoShutdown(this, 'AutoShutdown', {
+        apiId: adminApi.api.apiId,
+        idleMinutes: 30,
+      });
+    }
 
     // Outputs
     new cdk.CfnOutput(this, 'TelegramWebhookUrl', {
