@@ -34,11 +34,16 @@ export class DaleStack extends cdk.Stack {
     });
 
     // Web Hosting (S3 + CloudFront) — before AdminApi so CloudFront domain is available
+    // Set DOMAIN_NAME + CERTIFICATE_ARN env vars to enable a custom domain (e.g. dalegram.com).
     const webHosting = new WebHosting(this, 'WebHosting', {
       envName: props.envName,
+      domainName: process.env.DOMAIN_NAME,
+      certificateArn: process.env.CERTIFICATE_ARN,
     });
 
     const cloudFrontUrl = `https://${webHosting.distribution.distributionDomainName}`;
+    // siteUrl is the custom domain if configured, CloudFront domain otherwise
+    const siteUrl = webHosting.siteUrl;
 
     // Admin API (Cognito + API Gateway + Lambda)
     const adminApi = new AdminApi(this, 'AdminApi', {
@@ -56,8 +61,8 @@ export class DaleStack extends cdk.Stack {
       appleTeamId: process.env.APPLE_TEAM_ID,
       appleKeyId: process.env.APPLE_KEY_ID,
       applePrivateKey: process.env.APPLE_PRIVATE_KEY,
-      callbackUrls: process.env.CALLBACK_URLS?.split(',') ?? [`${cloudFrontUrl}/callback`, 'http://localhost:5173/callback'],
-      logoutUrls: process.env.LOGOUT_URLS?.split(',') ?? [cloudFrontUrl, 'http://localhost:5173/'],
+      callbackUrls: process.env.CALLBACK_URLS?.split(',') ?? [`${siteUrl}/callback`, 'http://localhost:5173/callback'],
+      logoutUrls: process.env.LOGOUT_URLS?.split(',') ?? [siteUrl, 'http://localhost:5173/'],
     });
 
     // Outputs
@@ -87,6 +92,15 @@ export class DaleStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, 'WebDistributionUrl', {
       value: cloudFrontUrl,
+    });
+
+    // CloudFront domain — CNAME dalegram.com → this value
+    new cdk.CfnOutput(this, 'CloudFrontDomain', {
+      value: webHosting.distribution.distributionDomainName,
+    });
+
+    new cdk.CfnOutput(this, 'SiteUrl', {
+      value: siteUrl,
     });
 
     new cdk.CfnOutput(this, 'CognitoDomain', {

@@ -2,15 +2,22 @@ import * as cdk from 'aws-cdk-lib';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import { Construct } from 'constructs';
 
 export interface WebHostingProps {
   envName: string;
+  /** Custom domain name, e.g. "dalegram.com". When provided, certificateArn must also be set. */
+  domainName?: string;
+  /** ARN of an ACM certificate (must be in us-east-1) covering domainName and www.domainName. */
+  certificateArn?: string;
 }
 
 export class WebHosting extends Construct {
   public readonly bucket: s3.Bucket;
   public readonly distribution: cloudfront.Distribution;
+  /** The primary URL for the site — custom domain if configured, CloudFront domain otherwise. */
+  public readonly siteUrl: string;
 
   constructor(scope: Construct, id: string, props: WebHostingProps) {
     super(scope, id);
@@ -21,6 +28,14 @@ export class WebHosting extends Construct {
       autoDeleteObjects: true,
     });
 
+    const certificate = props.domainName && props.certificateArn
+      ? acm.Certificate.fromCertificateArn(this, 'Certificate', props.certificateArn)
+      : undefined;
+
+    const domainNames = props.domainName && certificate
+      ? [props.domainName, `www.${props.domainName}`]
+      : undefined;
+
     this.distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultBehavior: {
         origin: new origins.S3Origin(this.bucket),
@@ -28,6 +43,8 @@ export class WebHosting extends Construct {
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
       },
       defaultRootObject: 'index.html',
+      domainNames,
+      certificate,
       errorResponses: [
         {
           httpStatus: 403,
@@ -43,5 +60,9 @@ export class WebHosting extends Construct {
         },
       ],
     });
+
+    this.siteUrl = props.domainName
+      ? `https://${props.domainName}`
+      : `https://${this.distribution.distributionDomainName}`;
   }
 }
